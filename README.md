@@ -4,13 +4,13 @@
 
 # How to configure it?
 
-* LLM specific configuration is done via config/config.yml. Default config loads a german fine tuned llm. 
-* Container specific configuration is done via docker-compose.yml.
+* Configuration is done via environment variable. Default config loads a german fine tuned llm. 
 
 # How to use it?
 
 * docker-compose up
 * By default, service is available under localhost:8000.
+* A frontend to chat with the llm is available under localhost:8000/chat
 * To learn about the api and try things out, connect to localhost:8000/docs
 
 # How to use it secure?
