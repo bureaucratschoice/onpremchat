@@ -35,6 +35,8 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
                 i_a += 1
             for name, text in messages:
                 ui.chat_message(text=text, name=name, sent=name == 'Sie')
+                
+                #ui.chat_message(text=text, name=name, sent=name == 'Sie')
             if 'status' in jobStat.getJobStatus(app.storage.browser['id'],app.storage.browser['id']):
                 if jobStat.getJobStatus(app.storage.browser['id'],app.storage.browser['id'])['status'] == 'processing':
                     thinking = True
@@ -70,6 +72,11 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
         def delete_chat() -> None:
             jobStat.removeJob(app.storage.browser['id'],app.storage.browser['id'])
             chat_messages.refresh()
+        
+        def copy_data():
+            if 'answer' in jobStat.getJobStatus(app.storage.browser['id'],app.storage.browser['id']):
+                text = jobStat.getJobStatus(app.storage.browser['id'],app.storage.browser['id'])['answer'][-1]
+                ui.run_javascript('navigator.clipboard.writeText(`' + text + '`)', timeout=5.0)
         async def send() -> None:
             #nonlocal thinking
             message = text.value
@@ -109,6 +116,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
                 text = ui.textarea(placeholder=placeholder).props('rounded outlined input-class=mx-3').props('clearable') \
                     .classes('w-full self-center').on('keydown.enter', send)
                 delete_btn = ui.button('Chatverlauf löschen!', on_click=lambda: delete_chat())
+                copy_btn = ui.button('Letzte Antwort kopieren', on_click=lambda: copy_data())
                 #update_btn = ui.button('Aktualisieren', on_click=lambda: chat_messages.refresh())
                 
                 
