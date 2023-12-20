@@ -19,12 +19,13 @@ url= os.getenv('MODEL_DOWNLOAD_URL',default="https://huggingface.co/TheBloke/em_
 filename = os.getenv('MODEL_BIN_PATH',default="/models/em_german_leo_mistral.Q5_K_S.gguf")
 ntokens = os.getenv('NUMBER_OF_TOKENS',default=4096)
 verbose = os.getenv('VERBOSE',default=True)
+layers = os.getenv('GPU_LAYERS',default=0)
 
 def build_llm():
     if not os.path.exists(filename):
         print("Specified Model not found. Downloading Model...")
         download_file(url,filename)
         print("Download complete.")
-    llm = Llama(model_path=filename,n_ctx=ntokens, n_batch=128,verbose=verbose) #verbose = False leads to error
+    llm = Llama(model_path=filename,n_ctx=ntokens, n_batch=128,verbose=verbose,n_gpu_layers=layers) #verbose = False leads to error
     return llm
 
