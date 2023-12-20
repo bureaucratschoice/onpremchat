@@ -13,11 +13,9 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
     def show():
         
         messages: List[Tuple[str, str]] = [] 
-        #app.storage.user['messages'] = app.storage.user.get('messages', messages )
         thinking: bool = False
         @ui.refreshable
         def chat_messages() -> None:
-            #app.storage.user['messages'][-1] = ('Assistent', jobStat.getJobStatus(app.storage.browser['id'],app.storage.browser['id'])['answer'])
             messages: List[Tuple[str, str]] = [] 
             messages.append(('Assistent','Achtung, prüfen Sie jede Antwort bevor Sie diese in irgendeiner Form weiterverwenden. Die Länge der Warteschlange: ' + str(jobStat.countQueuedJobs())))
             answers = []
@@ -35,8 +33,15 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
                     messages.append(('Assistent',answers[i_q]))
                 i_q += 1
                 i_a += 1
-            for name, text in messages: #app.storage.user['messages']:
+            for name, text in messages:
                 ui.chat_message(text=text, name=name, sent=name == 'Sie')
+            if 'status' in jobStat.getJobStatus(app.storage.browser['id'],app.storage.browser['id']):
+                if jobStat.getJobStatus(app.storage.browser['id'],app.storage.browser['id'])['status'] == 'processing':
+                    thinking = True
+                else:
+                    thinking = False
+            else:
+                thinking = False
             if thinking:
                 ui.spinner(size='3rem').classes('self-center')
             if context.get_client().has_socket_connection:
@@ -44,13 +49,14 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
 
         
         def update_response() -> None:
-            #app.storage.user['messages'][-1] = ('Assistent', jobStat.getJobStatus(app.storage.browser['id'],app.storage.browser['id'])['answer'])
+            
             answers = []
             questions = []
             if 'answer' in jobStat.getJobStatus(app.storage.browser['id'],app.storage.browser['id']):
                 answers = jobStat.getJobStatus(app.storage.browser['id'],app.storage.browser['id'])['answer']
             if 'prompt' in jobStat.getJobStatus(app.storage.browser['id'],app.storage.browser['id']):
                 questions = jobStat.getJobStatus(app.storage.browser['id'],app.storage.browser['id'])['prompt']
+            
 
             i_q = 0
             i_a = 0
@@ -62,42 +68,24 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
                 i_a += 1
 
         def delete_chat() -> None:
-            #app.storage.user['messages'] = messages
             jobStat.removeJob(app.storage.browser['id'],app.storage.browser['id'])
             chat_messages.refresh()
         async def send() -> None:
-            nonlocal thinking
+            #nonlocal thinking
             message = text.value
             
 
-            #app.storage.user['messages'].append(('Sie', text.value))
-            thinking = True
+
+            #thinking = True
             text.value = ''
-            #chat_messages.refresh()
-            #test = ['Hello ', 'this ', 'a ', 'test.' ]
-            #response = ""
-            #app.storage.user['messages'].append(('Assistent', response))
-            #print(messages)
-            #chat_messages.refresh()
+
             jobStat.addJob(app.storage.browser['id'],app.storage.browser['id'],message)
             job = {'token':app.storage.browser['id'],'uuid':app.storage.browser['id']}
             try:
                 taskQueue.put(job)
             except:
                 jobStat.updateStatus(frontend,app.storage.browser['id'],"failed") 
-            #for token in test:
-                #print(token)
-            #    response += token
-            #    app.storage.user['messages'][-1] = ('Assistent', response)
-                
-                #print(messages)
-            #    chat_messages.refresh()
-                
-                
-                
-            #response = "Howdyhow" #await llm.arun(message) #change llm interaction
-            #messages.append(('Bot', response))
-            thinking = False
+            #thinking = False
             chat_messages.refresh()
             
 
@@ -118,7 +106,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
         with ui.footer().classes('bg-white'), ui.column().classes('w-full max-w-3xl mx-auto my-6'):
             with ui.row().classes('w-full no-wrap items-center'):
                 placeholder = 'message' 
-                text = ui.textarea(placeholder=placeholder,validation={'Bitte geben Sie nicht mehr als 3000 Zeichen ein.': lambda value: len(value) < 3000}).props('rounded outlined input-class=mx-3').props('clearable') \
+                text = ui.textarea(placeholder=placeholder).props('rounded outlined input-class=mx-3').props('clearable') \
                     .classes('w-full self-center').on('keydown.enter', send)
                 delete_btn = ui.button('Chatverlauf löschen!', on_click=lambda: delete_chat())
                 #update_btn = ui.button('Aktualisieren', on_click=lambda: chat_messages.refresh())
