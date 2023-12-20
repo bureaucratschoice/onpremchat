@@ -228,7 +228,8 @@ def token_details(token):
         return tokens[token]
     return {'quota':0,'description':'Not existent'}
 
-supertoken = os.getenv('SUPERTOKEN',default="CHANGEMEVIAENV")
+supertoken = os.getenv('SUPERTOKEN',default="PLEASE_CHANGE_THIS_PLEASE")
+
 
 
 
