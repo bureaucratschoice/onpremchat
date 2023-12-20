@@ -1,20 +1,17 @@
 version: '3'
 services:
   web:
-    image: docker.io/bureaucratschoice/onpremchat:0.5
+    build: ./web
     command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "80"] 
     environment:
       - SUPERTOKEN=PLEASE_CHANGE_THIS_PLEASE # Really please change this, otherwise everyone reading the github repo can get access.
     volumes:
+      - ./web:/app #Development, consider removing this for production
       - ./models:/models
       - ./config:/config
     ports:
       - 8000:80
-  watchtower:
-    image: containrrr/watchtower
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /root/.docker/config.json:/config.json
+
 
 
 
