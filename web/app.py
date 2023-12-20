@@ -60,22 +60,28 @@ class jobStatus():
         return False
 
     def updateAnswer(self,token,uuid,answer):
-        if token in self.jobsByToken:
-            if uuid in self.jobsByToken[token]:
-                if 'answer' in self.jobsByToken[token][uuid]:
-                    self.jobsByToken[token][uuid]['answer'][-1] = answer
-                else:
-                    self.jobsByToken[token][uuid]['answer'] = [answer]
-                return True
-        return False
+        try:
+            if token in self.jobsByToken:
+                if uuid in self.jobsByToken[token]:
+                    if 'answer' in self.jobsByToken[token][uuid]:
+                        self.jobsByToken[token][uuid]['answer'][-1] = answer
+                    else:
+                        self.jobsByToken[token][uuid]['answer'] = [answer]
+                    return True
+            return False
+        except:
+            return False
     
     
     def updateStatus(self,token,uuid,status):
-        if token in self.jobsByToken:
-            if uuid in self.jobsByToken[token]:
-                self.jobsByToken[token][uuid]['status'] = status
-                return True
-        return False
+        try:
+            if token in self.jobsByToken:
+                if uuid in self.jobsByToken[token]:
+                    self.jobsByToken[token][uuid]['status'] = status
+                    return True
+            return False
+        except:
+            return False
     
     def getJobStatus(self,token,uuid):
         if token in self.jobsByToken:
@@ -134,7 +140,8 @@ class MainProcessor (threading.Thread):
                 for answ in answer:
                     res = answ['choices'][0]['text'] 
                     response += res
-                    jobStat.updateAnswer(job['token'],job['uuid'],response) 
+                    if not jobStat.updateAnswer(job['token'],job['uuid'],response):
+                        break
             except:
                 response = "An Error occured."
             jobStat.updateAnswer(job['token'],job['uuid'],response)            
