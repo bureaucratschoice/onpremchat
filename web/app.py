@@ -23,41 +23,65 @@ class jobStatus():
     def __init__(self):
         self.jobsByToken = {}
 
-    def addJob(self,token,uuid,prompt): 
-        if token in self.jobsByToken:
-            if uuid in self.jobsByToken[token]:
-                self.jobsByToken[token][uuid] = {'status':'queued','prompt':self.jobsByToken[token][uuid]['prompt'] + [prompt],'answer':self.jobsByToken[token][uuid]['answer']} 
+    def addJob(self,token,uuid,prompt):
+        try: 
+            if token in self.jobsByToken:
+                if uuid in self.jobsByToken[token]:
+                    self.jobsByToken[token][uuid] = {'status':'queued','prompt':self.jobsByToken[token][uuid]['prompt'] + [prompt],'answer':self.jobsByToken[token][uuid]['answer']} 
+                else:
+                    self.jobsByToken[token][uuid] = {'status':'queued','prompt':[prompt],'answer':[]} 
             else:
-                self.jobsByToken[token][uuid] = {'status':'queued','prompt':[prompt],'answer':[]} 
-        else:
-            self.jobsByToken[token] = {uuid:{'status':'queued','prompt':[prompt]},'answer':[]} 
-        
+                self.jobsByToken[token] = {uuid:{'status':'queued','prompt':[prompt],'answer':[]}} 
+        except:
+            return False
     def countQueuedJobs(self):
-        counter = 0
-        for token in self.jobsByToken:
-            for uuid in self.jobsByToken[token]:
-                if 'status' in self.jobsByToken[token][uuid]:
-                    if self.jobsByToken[token][uuid]['status'] == 'queued':
-                        counter +=1
-        return counter
-
+        try:
+            counter = 0
+            for token in self.jobsByToken:
+                for uuid in self.jobsByToken[token]:
+                    if 'status' in self.jobsByToken[token][uuid]:
+                        if self.jobsByToken[token][uuid]['status'] == 'queued':
+                            counter +=1
+            return counter
+        except:
+            return 0
 
     def removeJob(self,token,uuid):
-        if token in self.jobsByToken:
-            if uuid in self.jobsByToken[token]:
-                del self.jobsByToken[token][uuid]
+        try:
+            if token in self.jobsByToken:
+                if uuid in self.jobsByToken[token]:
+                    del self.jobsByToken[token][uuid]
+                    return True
+            return False
+        except:
+            return False
+
+    def superRemoveJob(self,uuid):
+        try:
+            if uuid == 'All':
+                self.jobsByToken = {}
                 return True
-        return False
+            else:
+                for token in self.jobsByToken:
+                    if uuid in self.jobsByToken[token]:
+                        del self.jobsByToken[token][uuid]
+                        return True
+                return False
+        except:
+            return False
     
     def addAnswer(self,token,uuid,answer):
-        if token in self.jobsByToken:
-            if uuid in self.jobsByToken[token]:
-                if 'answer' in self.jobsByToken[token][uuid]:
-                    self.jobsByToken[token][uuid]['answer'].append(answer)
-                else:
-                    self.jobsByToken[token][uuid]['answer'] = [answer]
-                return True
-        return False
+        try:
+            if token in self.jobsByToken:
+                if uuid in self.jobsByToken[token]:
+                    if 'answer' in self.jobsByToken[token][uuid]:
+                        self.jobsByToken[token][uuid]['answer'].append(answer)
+                    else:
+                        self.jobsByToken[token][uuid]['answer'] = [answer]
+                    return True
+            return False
+        except:
+            return False
 
     def updateAnswer(self,token,uuid,answer):
         try:
@@ -84,20 +108,36 @@ class jobStatus():
             return False
     
     def getJobStatus(self,token,uuid):
-        if token in self.jobsByToken:
-            if uuid in self.jobsByToken[token]:
-                status = self.jobsByToken[token][uuid]
-                status['uuid'] = uuid
-                return self.jobsByToken[token][uuid]
-        return {'uuid':'','status':'','prompt':[''],'answer':['']} 
+        try:
+            if token in self.jobsByToken:
+                if uuid in self.jobsByToken[token]:
+                    status = self.jobsByToken[token][uuid]
+                    status['uuid'] = uuid
+                    return self.jobsByToken[token][uuid]
+            return {'uuid':'','status':'','prompt':[''],'answer':['']} 
+        except:
+            return False
     
     def getAllJobsForToken(self,token):
-        if token in self.jobsByToken:
-            return self.jobsByToken[token]
-        return {'':{'status':'','prompt':[''],'answer':['']}} 
+        try:
+            if token in self.jobsByToken:
+                return self.jobsByToken[token]
+            return {'':{'status':'','prompt':[''],'answer':['']}} 
+        except:
+            return False
 
     def getAllStatus(self):
-        return self.jobsByToken
+        try:
+            result = {}
+            for token in self.jobsByToken:
+                result[token] = {}
+                for uuid in self.jobsByToken[token]:
+                    result[token][uuid] = {}
+                    if 'status' in self.jobsByToken[token][uuid]:
+                        result[token][uuid]['status'] = self.jobsByToken[token][uuid]['status']
+            return result
+        except:
+            return False
             
   
 class MainProcessor (threading.Thread):
@@ -235,6 +275,23 @@ async def get_status(status: Status) -> Any:
     else:
         stat = jobStat.getJobStatus(status.token,status.uuid)
     return stat
+
+@app.post("/getAllStatus/")
+async def get_status(status: Status) -> Any:
+    if status.token == supertoken:
+        return jobStat.getAllStatus()
+    else:
+        return {"result": "Acces denied."}
+
+@app.post("/deleteJob/")
+async def get_status(status: Status) -> Any:
+    if status.token == supertoken:
+        stat = jobStat.superRemoveJob(status.uuid)
+        
+        return stat
+    else:
+        return {"result": "Acces denied."}
+    
 
 @app.post("/createToken/")
 async def create_token(token: TokenCreation) -> Any:
