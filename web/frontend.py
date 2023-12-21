@@ -17,7 +17,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
         @ui.refreshable
         def chat_messages() -> None:
             messages: List[Tuple[str, str]] = [] 
-            messages.append(('Assistent','Achtung, prüfen Sie jede Antwort bevor Sie diese in irgendeiner Form weiterverwenden. Die Länge der Warteschlange: ' + str(jobStat.countQueuedJobs())))
+            messages.append(('Assistent','Achtung, prüfen Sie jede Antwort bevor Sie diese in irgendeiner Form weiterverwenden. Je länger Ihre Frage ist bzw. je länger der bisherige Chatverlauf, desto länger brauche ich zum lesen. Es kann daher dauern, bis ich anfange Ihre Antwort zu schreiben. Die Länge der Warteschlange ist aktuell: ' + str(jobStat.countQueuedJobs())))
             answers = []
             questions = []
             if 'answer' in jobStat.getJobStatus(app.storage.browser['id'],app.storage.browser['id']):

@@ -162,15 +162,15 @@ class MainProcessor (threading.Thread):
             i_a = 0
             instruction = ""
             while i_p < len(prompts):
-                instruction += prompts[i_p]
+                instruction += "USER:  " + prompts[i_p]
                 if i_a < len(answers):
-                    instruction += answers[i_a]
+                    instruction += "ASSISTANT:  " + answers[i_a]
                 i_p += 1
                 i_a += 1
             
-            if len(instruction) >= 3000:
-                instruction = instruction[-3000:]
-            prompt = f"Du bist ein hilfreicher Assistent. USER: {instruction} ASSISTANT:"
+            if len(instruction) >= 2000:
+                instruction = instruction[-2000:]
+            prompt = f"Du bist ein hilfreicher Assistent. {instruction} ASSISTANT:"
 
             response = ""
             jobStat.addAnswer(job['token'],job['uuid'],response)
