@@ -62,6 +62,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
             
             else:
                 thinking = False
+                timer.activate()
             if thinking:
                 ui.spinner(size='3rem').classes('self-center')
             if context.get_client().has_socket_connection:
@@ -90,6 +91,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
 
         def delete_chat() -> None:
             jobStat.removeJob(app.storage.browser['id'],app.storage.browser['id'])
+           
             chat_messages.refresh()
         
         def copy_data():
