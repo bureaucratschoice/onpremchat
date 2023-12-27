@@ -7,17 +7,28 @@ from fastapi import FastAPI
 import os
 import time
 
+class InputText:
+    def __init__(self):
+        self.text = ""
+
+inputText = InputText()
 
 def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
+    assi = os.getenv('ASSISTANT',default="Assistent")
+    you = os.getenv('YOU',default="Sie")
+    greeting = os.getenv('GREETING',default="Achtung, prüfen Sie jede Antwort bevor Sie diese in irgendeiner Form weiterverwenden. Je länger Ihre Frage ist bzw. je länger der bisherige Chatverlauf, desto länger brauche ich zum lesen. Es kann daher dauern, bis ich anfange Ihre Antwort zu schreiben. Die Länge der Warteschlange ist aktuell: ")
+        
     @ui.page('/chat')
+    
     def show():
         
         messages: List[Tuple[str, str]] = [] 
         thinking: bool = False
+        timer = ui.timer(1.0, lambda: chat_messages.refresh())
         @ui.refreshable
         def chat_messages() -> None:
             messages: List[Tuple[str, str]] = [] 
-            messages.append(('Assistent','Achtung, prüfen Sie jede Antwort bevor Sie diese in irgendeiner Form weiterverwenden. Je länger Ihre Frage ist bzw. je länger der bisherige Chatverlauf, desto länger brauche ich zum lesen. Es kann daher dauern, bis ich anfange Ihre Antwort zu schreiben. Die Länge der Warteschlange ist aktuell: ' + str(jobStat.countQueuedJobs())))
+            messages.append((assi, greeting + str(jobStat.countQueuedJobs())))
             answers = []
             questions = []
             if 'answer' in jobStat.getJobStatus(app.storage.browser['id'],app.storage.browser['id']):
@@ -26,22 +37,29 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
                 questions = jobStat.getJobStatus(app.storage.browser['id'],app.storage.browser['id'])['prompt']
             i_q = 0
             i_a = 0
+           
             while i_q < len(questions) and questions[i_q]:
 
-                messages.append(('Sie',questions[i_q]))
+                messages.append((you,questions[i_q]))
                 if i_a < len(answers) and answers[i_q]:
-                    messages.append(('Assistent',answers[i_q]))
+                    messages.append((assi,answers[i_q]))
                 i_q += 1
                 i_a += 1
             for name, text in messages:
-                ui.chat_message(text=text, name=name, sent=name == 'Sie')
+                ui.chat_message(text=text, name=name, sent=name == you)
                 
-                #ui.chat_message(text=text, name=name, sent=name == 'Sie')
+                #ui.chat_message(text=text, name=name, sent=name == you)
             if 'status' in jobStat.getJobStatus(app.storage.browser['id'],app.storage.browser['id']):
                 if jobStat.getJobStatus(app.storage.browser['id'],app.storage.browser['id'])['status'] == 'processing':
                     thinking = True
+                    timer.activate()
+                    
                 else:
                     thinking = False
+                    timer.activate()
+                if jobStat.getJobStatus(app.storage.browser['id'],app.storage.browser['id'])['status'] == 'finished':
+                    timer.deactivate()
+            
             else:
                 thinking = False
             if thinking:
@@ -62,10 +80,11 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
 
             i_q = 0
             i_a = 0
+            
             while i_q < len(questions):
-                messages.append(('Sie',questions[i_q]))
+                messages.append((you,questions[i_q]))
                 if i_a < len(answers):
-                    messages.append(('Assistent',answers[i_q]))
+                    messages.append((assi,answers[i_q]))
                 i_q += 1
                 i_a += 1
 
@@ -79,7 +98,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
                 ui.run_javascript('navigator.clipboard.writeText(`' + text + '`)', timeout=5.0)
         async def send() -> None:
             #nonlocal thinking
-            message = text.value
+            message = app.storage.user['text']
             
 
 
@@ -93,12 +112,15 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
             except:
                 jobStat.updateStatus(frontend,app.storage.browser['id'],"failed") 
             #thinking = False
+            timer.activate()
             chat_messages.refresh()
             
 
         anchor_style = r'a:link, a:visited {color: inherit !important; text-decoration: none; font-weight: 500}'
         ui.add_head_html(f'<style>{anchor_style}</style>')
+        title = os.getenv('APP_TITLE',default="MWICHT")
 
+        ui.page_title(title)
         # the queries below are used to expand the contend down to the footer (content can then use flex-grow to expand)
         ui.query('.q-page').classes('flex')
         ui.query('.nicegui-content').classes('w-full')
@@ -114,15 +136,16 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
             with ui.row().classes('w-full no-wrap items-center'):
                 placeholder = 'message' 
                 text = ui.textarea(placeholder=placeholder).props('rounded outlined input-class=mx-3').props('clearable') \
-                    .classes('w-full self-center').on('keydown.enter', send)
-                delete_btn = ui.button('Chatverlauf löschen!', on_click=lambda: delete_chat())
-                copy_btn = ui.button('Letzte Antwort kopieren', on_click=lambda: copy_data())
+                    .classes('w-full self-center').bind_value(app.storage.user, 'text').on('keydown.enter', send)
+                send_btn = ui.button(icon="send", on_click=lambda: send())
+                copy_btn = ui.button(icon="content_copy", on_click=lambda: copy_data())
+                delete_btn = ui.button(icon="delete_forever", on_click=lambda: delete_chat())
                 #update_btn = ui.button('Aktualisieren', on_click=lambda: chat_messages.refresh())
                 
                 
             #ui.markdown('simple chat app built with [NiceGUI](https://nicegui.io)') \
             #    .classes('text-xs self-end mr-8 m-[-1em] text-primary')
-        ui.timer(1.0, lambda: chat_messages.refresh())
+        
     ui.run_with(
         fastapi_app,
         storage_secret=os.getenv('STORAGE_SEC',default="CHANGEME"),  # NOTE setting a secret is optional but allows for persistent storage per user
