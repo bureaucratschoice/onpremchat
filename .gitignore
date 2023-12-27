@@ -166,3 +166,6 @@ translate/models/
 
 #tokens
 config/tokens.pickle
+
+#nicegui
+web/.nicegui
