@@ -170,8 +170,9 @@ class MainProcessor (threading.Thread):
             
             if len(instruction) >= 2000:
                 instruction = instruction[-2000:]
-            prompt = f"Du bist ein hilfreicher Assistent. {instruction} ASSISTANT:"
-
+            chatprompt = os.getenv('CHATPROMPT',default="Du bist ein hilfreicher Assistent.")
+            prompt = f"{chatprompt} {instruction} ASSISTANT:"
+            
             response = ""
             jobStat.addAnswer(job['token'],job['uuid'],response)
             try:
