@@ -168,4 +168,4 @@ translate/models/
 config/tokens.pickle
 
 #nicegui
-web/.nicegui
+web/.nicegui/
