@@ -1,7 +1,7 @@
 FROM python:3.10-slim-bullseye
 
 WORKDIR /app
-ADD . /app
+ADD ./src/ /app
 
 RUN apt-get update \
     && DEBIAN_FRONTEND="noninteractive" apt-get install -y --no-install-recommends \

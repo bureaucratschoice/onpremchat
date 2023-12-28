@@ -1,2 +1,2 @@
 FROM onpremchat_web:latest
-ADD ../ /app  
+ADD ../src/  /app  

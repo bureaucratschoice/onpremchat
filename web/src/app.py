@@ -1,4 +1,4 @@
-from src.llm import build_llm
+from llm import build_llm
 import requests
 import json
 print("start")

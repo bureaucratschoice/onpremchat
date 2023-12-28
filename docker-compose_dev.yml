@@ -6,7 +6,7 @@ services:
     environment:
       - SUPERTOKEN=PLEASE_CHANGE_THIS_PLEASE # Really please change this, otherwise everyone reading the github repo can get access.
     volumes:
-      - ./web:/app #Development, consider removing this for production
+      - ./web/src:/app #Development, consider removing this for production
       - ./models:/models
       - ./config:/config
     ports:
