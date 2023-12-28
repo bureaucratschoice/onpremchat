@@ -1,7 +1,9 @@
 version: '3.8'
 services:
   web:
-    build: ./web/build_app
+    build: 
+      context: ./web
+      dockerfile: ./build_app/Dockerfile
     image:
       bureaucratschoice/onpremchat:latest
     command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "80"] 
