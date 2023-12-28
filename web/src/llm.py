@@ -26,6 +26,6 @@ def build_llm():
         print("Specified Model not found. Downloading Model...")
         download_file(url,filename)
         print("Download complete.")
-    llm = Llama(model_path=filename,n_ctx=ntokens, n_batch=128,verbose=verbose,n_gpu_layers=layers) #verbose = False leads to error
+    llm = Llama(model_path=filename,n_ctx=ntokens, n_batch=128,verbose=verbose,n_gpu_layers=int(layers)) #verbose = False leads to error
     return llm
 
