@@ -3,7 +3,7 @@
 * Models are downloaded on first time of usage and stored in an external mount.
 * Chat history is held in memory only.
 
-![](Sample Screenshot.png) 
+![](Sample_Screenshot.png) 
 
 # What ressources do you need?
 * The system uses as much CPU cores as you can provide. For acceptable performance 4 cores or more are recommended.
