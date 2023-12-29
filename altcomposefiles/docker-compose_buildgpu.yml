@@ -1,12 +1,15 @@
-version: '3'
+version: '3.8'
 services:
   web:
-    build: ./web
+    build: 
+      context: ../web
+      dockerfile: ./build_gpuruntime/Dockerfile
+    image:
+      local/onpremchat:latest-gpu
     command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "80"] 
     environment:
       - SUPERTOKEN=PLEASE_CHANGE_THIS_PLEASE # Really please change this, otherwise everyone reading the github repo can get access.
     volumes:
-      - ./web/src:/app #Development, consider removing this for production
       - ./models:/models
       - ./config:/config
     ports:
