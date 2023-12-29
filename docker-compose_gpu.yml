@@ -14,12 +14,19 @@ services:
       - ./config:/config
     ports:
       - 8000:80
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
   watchtower:
     image: containrrr/watchtower
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    command: --interval 600
+    command: --interval 3600
 
 
 

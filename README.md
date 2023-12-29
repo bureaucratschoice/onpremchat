@@ -9,8 +9,11 @@
 
 # How to use it?
 
+* git clone https://github.com/bureaucratschoice/onpremchat.git
+* go into the new directory onpremchat
+
 ## CPU only
-* docker-compose up 
+* docker-compose up - if you don't have docker-compose
 * By default, service is available under localhost:8000.
 * A frontend to chat with the llm is available under localhost:8000/chat
 * To learn about the api and try things out, connect to localhost:8000/docs
@@ -34,3 +37,13 @@
 # How to use it secure?
 * Service provides basic security suitable for usage inside perimeter. It's not recommended to directly expose the service to the internet.
 
+# How to install docker
+If you don't have docker installed you find the links to the necessary steps below.
+## CPU only
+install docker - https://docs.docker.com/engine/install/
+install docker-compose - https://docs.docker.com/compose/install/standalone/
+## GPU support
+install GPU driver - https://docs.nvidia.com/datacenter/tesla/tesla-installation-notes/index.html
+install docker - https://docs.docker.com/engine/install/
+install docker-compose - https://docs.docker.com/compose/install/standalone/
+install nvidia container runtime - https://docs.docker.com/config/containers/resource_constraints/#gpu
