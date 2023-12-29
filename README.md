@@ -1,23 +1,36 @@
 # What it does? 
-* With this repo you get a container which offers a rest api to a local hosted llama based llm. No GPU required.
+* With this repo you get a container which offers a rest api to a local hosted llama based llm. No GPU required but you can use it with GPU support, if you have a GPU available.
 * Models are downloaded on first time of usage and stored in an external mount.
 * Chat history is held in memory only.
 
 # What ressources do you need?
-* The system uses as much CPU cores as you can provide. For acceptable performance 4 cores are recommended.
+* The system uses as much CPU cores as you can provide. For acceptable performance 4 cores or more are recommended.
 * Maximum RAM required is about 8 GB. In general less than 1 GB is used.
-
-# How to configure it?
-
-* Configuration is done via environment variable. Default config loads a german fine tuned llm. 
 
 # How to use it?
 
-* docker-compose up
+## CPU only
+* docker-compose up 
 * By default, service is available under localhost:8000.
 * A frontend to chat with the llm is available under localhost:8000/chat
 * To learn about the api and try things out, connect to localhost:8000/docs
 
+## GPU support
+* docker-compose -f docker-compose_gpu.yml up
+
+# How to configure it?
+
+* Configuration is done via environment variables. Default config loads a german fine tuned llm. 
+
+## Configuration options general:
+* SUPERTOKEN - The token for admin access to the api
+* MODEL_DOWNLOAD_URL - The URL to download a model in GGUF format from.
+* MODEL_BIN_PATH - The path of the model as /models/[OPTIONAL_SUBDIRECTORIES]/FILENAME
+
+## Additional options for GPU image:
+* GPU_LAYERS - The number of layers to load on GPU
+
+
 # How to use it secure?
-* Service provides basic security suitable for usage inside perimeter. It's not recommende to directly expose the service to the internet.
+* Service provides basic security suitable for usage inside perimeter. It's not recommended to directly expose the service to the internet.
 
