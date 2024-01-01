@@ -15,7 +15,7 @@ class InputText:
 inputText = InputText()
 
 def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
-    assi = os.getenv('ASSISTANT',default="Assistent")
+    assi = os.getenv('ASSISTANT',default="Assistent:in")
     you = os.getenv('YOU',default="Sie")
     greeting = os.getenv('GREETING',default="Achtung, prüfen Sie jede Antwort bevor Sie diese in irgendeiner Form weiterverwenden. Je länger Ihre Frage ist bzw. je länger der bisherige Chatverlauf, desto länger brauche ich zum lesen. Es kann daher dauern, bis ich anfange Ihre Antwort zu schreiben. Die Länge der Warteschlange ist aktuell: ")
         
