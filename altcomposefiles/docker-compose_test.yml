@@ -1,7 +1,7 @@
 version: '3'
 services:
   web:
-    image: docker.io/bureaucratschoice/onpremchat:latest
+    image: docker.io/bureaucratschoice/onpremchat:testing
     restart: unless-stopped
     command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "80"] 
     environment:
@@ -9,8 +9,8 @@ services:
       - MODEL_DOWNLOAD_URL=https://huggingface.co/TheBloke/em_german_leo_mistral-GGUF/resolve/main/em_german_leo_mistral.Q5_K_S.gguf
       - MODEL_BIN_PATH=/models/em_german_leo_mistral.Q5_K_S.gguf
     volumes:
-      - ./models:/models
-      - ./config:/config
+      - ../models:/models
+      - ../config:/config
     ports:
       - 8000:80
   watchtower:
@@ -18,7 +18,7 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    command: --interval 3600
+    command: --interval 600
 
 
 
