@@ -19,6 +19,9 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
     you = os.getenv('YOU',default="Sie")
     greeting = os.getenv('GREETING',default="Achtung, prüfen Sie jede Antwort bevor Sie diese in irgendeiner Form weiterverwenden. Je länger Ihre Frage ist bzw. je länger der bisherige Chatverlauf, desto länger brauche ich zum lesen. Es kann daher dauern, bis ich anfange Ihre Antwort zu schreiben. Die Länge der Warteschlange ist aktuell: ")
         
+
+
+
     @ui.page('/chat')
     
     def show():
@@ -149,6 +152,11 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
             #ui.markdown('simple chat app built with [NiceGUI](https://nicegui.io)') \
             #    .classes('text-xs self-end mr-8 m-[-1em] text-primary')
 
+    @ui.page('/')
+    def home():
+        tochat = os.getenv('TOCHAT',default="Zum Chat")
+        ui.button(tochat, on_click=lambda: ui.open(show, new_tab=False))
+    
 
     ui.run_with(
         fastapi_app,
