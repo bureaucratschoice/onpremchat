@@ -6,6 +6,7 @@ from datetime import datetime
 from fastapi import FastAPI
 import os
 import time
+from uuid import uuid4
 
 class InputText:
     def __init__(self):
@@ -147,9 +148,10 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
                 
             #ui.markdown('simple chat app built with [NiceGUI](https://nicegui.io)') \
             #    .classes('text-xs self-end mr-8 m-[-1em] text-primary')
-        
+
+
     ui.run_with(
         fastapi_app,
-        storage_secret=os.getenv('STORAGE_SEC',default="CHANGEME"),  # NOTE setting a secret is optional but allows for persistent storage per user
+        storage_secret = uuid4(),
     )
 
