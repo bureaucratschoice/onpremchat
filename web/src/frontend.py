@@ -152,44 +152,43 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
                     copy_btn = ui.button(icon="content_copy", on_click=lambda: copy_data())
                     delete_btn = ui.button(icon="delete_forever", on_click=lambda: delete_chat())
             
-                #Config options to create
                 with ui.row().classes('w-full no-wrap items-center'):
-                    config_lbl = ui.label('CSS').style('color: #000') #COLOR!
+                    config_lbl = ui.label('CSS').style('color: #000') 
                     config_lbl.set_text('custom config: ')  
                     v = ui.checkbox('custom config', value=False)
                 with ui.row().classes('w-full no-wrap items-center').bind_visibility_from(v, 'value'):
-                    temp_lbl = ui.label('CSS').style('color: #000') #COLOR!
+                    temp_lbl = ui.label('CSS').style('color: #000')
                     temp_lbl.set_text('Temperature: ')
                     temp_sld = ui.slider(min=0, max=100, value=os.getenv('TEMPERATURE',default=0.7)*100).bind_value(app.storage.user, 'temperature')
-                    temp_val_lbl = ui.label('CSS').style('color: #000') #COLOR!
+                    temp_val_lbl = ui.label('CSS').style('color: #000')
                     temp_val_lbl.bind_text_from(app.storage.user, 'temperature', lambda x: x/100)
 
                 with ui.row().classes('w-full no-wrap items-center').bind_visibility_from(v, 'value'):
-                    max_tokens_lbl = ui.label('CSS').style('color: #000') #COLOR!
+                    max_tokens_lbl = ui.label('CSS').style('color: #000')
                     max_tokens_lbl.set_text('Max Tokens: ')
                     max_tokens_sld = ui.slider(min=0, max=4096, value=os.getenv('MAX_TOKENS',default=1024)).bind_value(app.storage.user, 'max_tokens')
-                    max_tokens_val_lbl = ui.label('CSS').style('color: #000') #COLOR!
+                    max_tokens_val_lbl = ui.label('CSS').style('color: #000')
                     max_tokens_val_lbl.bind_text_from(app.storage.user, 'max_tokens')
 
                 with ui.row().classes('w-full no-wrap items-center').bind_visibility_from(v, 'value'):
-                    top_k_lbl = ui.label('CSS').style('color: #000') #COLOR!
+                    top_k_lbl = ui.label('CSS').style('color: #000') 
                     top_k_lbl.set_text('Top k: ')
                     top_k_sld = ui.slider(min=0, max=100, value=os.getenv('TOP_K',default=40)).bind_value(app.storage.user, 'top_k')
-                    top_k_val_lbl = ui.label('CSS').style('color: #000') #COLOR!
+                    top_k_val_lbl = ui.label('CSS').style('color: #000') 
                     top_k_val_lbl.bind_text_from(app.storage.user, 'top_k')
 
                 with ui.row().classes('w-full no-wrap items-center').bind_visibility_from(v, 'value'):
-                    top_p_lbl = ui.label('CSS').style('color: #000') #COLOR!
+                    top_p_lbl = ui.label('CSS').style('color: #000') 
                     top_p_lbl.set_text('Top p: ')
                     top_p_sld = ui.slider(min=0, max=100, value=os.getenv('TOP_P',default=0.8)*100).bind_value(app.storage.user, 'top_p')
-                    top_p_val_lbl = ui.label('CSS').style('color: #000') #COLOR!
+                    top_p_val_lbl = ui.label('CSS').style('color: #000') 
                     top_p_val_lbl.bind_text_from(app.storage.user, 'top_p',lambda x: x/100)
 
                 with ui.row().classes('w-full no-wrap items-center').bind_visibility_from(v, 'value'):
-                    repeat_penalty_lbl = ui.label('CSS').style('color: #000') #COLOR!
+                    repeat_penalty_lbl = ui.label('CSS').style('color: #000')
                     repeat_penalty_lbl.set_text('Repeat penalty: ')
                     repeat_penalty_sld = ui.slider(min=0, max=200, value=os.getenv('REPEAT_PENALTY',default=1.15)*100).bind_value(app.storage.user, 'repeat_penalty')
-                    repeat_penalty_val_lbl = ui.label('CSS').style('color: #000') #COLOR!
+                    repeat_penalty_val_lbl = ui.label('CSS').style('color: #000') 
                     repeat_penalty_val_lbl.bind_text_from(app.storage.user, 'repeat_penalty',lambda x: x/100)
                 
                 with ui.row().classes('w-full no-wrap items-center').bind_visibility_from(v, 'value'):                   
