@@ -23,15 +23,15 @@ class jobStatus():
     def __init__(self):
         self.jobsByToken = {}
 
-    def addJob(self,token,uuid,prompt):
+    def addJob(self,token,uuid,prompt,custom_config = False):
         try: 
             if token in self.jobsByToken:
                 if uuid in self.jobsByToken[token]:
-                    self.jobsByToken[token][uuid] = {'status':'queued','prompt':self.jobsByToken[token][uuid]['prompt'] + [prompt],'answer':self.jobsByToken[token][uuid]['answer']} 
+                    self.jobsByToken[token][uuid] = {'status':'queued','prompt':self.jobsByToken[token][uuid]['prompt'] + [prompt],'answer':self.jobsByToken[token][uuid]['answer'],'custom_config':custom_config} 
                 else:
-                    self.jobsByToken[token][uuid] = {'status':'queued','prompt':[prompt],'answer':[]} 
+                    self.jobsByToken[token][uuid] = {'status':'queued','prompt':[prompt],'answer':[],'custom_config':custom_config} 
             else:
-                self.jobsByToken[token] = {uuid:{'status':'queued','prompt':[prompt],'answer':[]}} 
+                self.jobsByToken[token] = {uuid:{'status':'queued','prompt':[prompt],'answer':[],'custom_config':custom_config}} 
         except:
             return False
     def countQueuedJobs(self):
@@ -176,7 +176,10 @@ class MainProcessor (threading.Thread):
             response = ""
             jobStat.addAnswer(job['token'],job['uuid'],response)
             try:
-                answer = llm(prompt, stream=True, temperature = 0.7, max_tokens = 1024, top_k=20, top_p=0.9,repeat_penalty=1.15)
+                if item['custom_config']:
+                    answer = llm(prompt, stream=True, temperature = item['custom_config']['temperature'], max_tokens = item['custom_config']['max_tokens'], top_k=item['custom_config']['top_k'], top_p=item['custom_config']['top_p'],repeat_penalty=item['custom_config']['repeat_penalty'])
+                else:
+                    answer = llm(prompt, stream=True, temperature = 0.7, max_tokens = 1024, top_k=20, top_p=0.9,repeat_penalty=1.15)
                 
                 for answ in answer:
                     res = answ['choices'][0]['text'] 

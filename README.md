@@ -1,3 +1,6 @@
+# News
+Version 0.5.1 is current latest. With this version, users can set custom llm parameters via the user interface.
+
 # What it does? 
 * With this repo you get a container which offers a rest api to a local hosted llama based llm. No GPU required but you can use it with GPU support, if you have a GPU available.
 * Models are downloaded on first time of usage and stored in an external mount.
@@ -34,7 +37,6 @@
 
 ## Additional options for GPU image:
 * GPU_LAYERS - The number of layers to load on GPU
-
 
 # How to use it secure?
 * Service provides basic security suitable for usage inside perimeter. It's not recommended to directly expose the service to the internet.
