@@ -52,7 +52,6 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
             for name, text in messages:
                 ui.chat_message(text=text, name=name, sent=name == you)
                 
-                #ui.chat_message(text=text, name=name, sent=name == you)
             if 'status' in jobStat.getJobStatus(app.storage.browser['id'],app.storage.browser['id']):
                 if jobStat.getJobStatus(app.storage.browser['id'],app.storage.browser['id'])['status'] == 'processing':
                     thinking = True
@@ -102,22 +101,27 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
             if 'answer' in jobStat.getJobStatus(app.storage.browser['id'],app.storage.browser['id']):
                 text = jobStat.getJobStatus(app.storage.browser['id'],app.storage.browser['id'])['answer'][-1]
                 ui.run_javascript('navigator.clipboard.writeText(`' + text + '`)', timeout=5.0)
+
+        def reset_config():
+            app.storage.user['temperature'] = os.getenv('TEMPERATURE',default=0.7)*100
+            app.storage.user['max_tokens'] = os.getenv('MAX_TOKENS',default=1024)
+            app.storage.user['top_k'] = os.getenv('TOP_K',default=40)
+            app.storage.user['top_p'] = os.getenv('TOP_P',default=0.8)*100
+            app.storage.user['repeat_penalty'] = os.getenv('REPEAT_PENALTY',default=1.15)*100
+
         async def send() -> None:
-            #nonlocal thinking
+
             message = app.storage.user['text']
-            
-
-
-            #thinking = True
+            custom_config = {'temperature':app.storage.user['temperature']/100,'max_tokens':app.storage.user['max_tokens'],'top_k':app.storage.user['top_k'],'top_p':app.storage.user['top_p']/100,'repeat_penalty':app.storage.user['repeat_penalty']/100}
             text.value = ''
-
-            jobStat.addJob(app.storage.browser['id'],app.storage.browser['id'],message)
+            print(custom_config)
+            jobStat.addJob(app.storage.browser['id'],app.storage.browser['id'],message,custom_config)
             job = {'token':app.storage.browser['id'],'uuid':app.storage.browser['id']}
             try:
                 taskQueue.put(job)
             except:
                 jobStat.updateStatus(frontend,app.storage.browser['id'],"failed") 
-            #thinking = False
+
             timer.activate()
             chat_messages.refresh()
             
@@ -138,19 +142,61 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
                 chat_messages()
 
 
-        with ui.footer().classes('bg-white'), ui.column().classes('w-full max-w-3xl mx-auto my-6'):
-            with ui.row().classes('w-full no-wrap items-center'):
-                placeholder = 'message' 
-                text = ui.textarea(placeholder=placeholder).props('rounded outlined input-class=mx-3').props('clearable') \
+        with ui.footer().classes('bg-white'):
+            with ui.column().classes('w-full max-w-3xl mx-auto my-6'):
+                with ui.row().classes('w-full no-wrap items-center'):
+                    placeholder = 'message' 
+                    text = ui.textarea(placeholder=placeholder).props('rounded outlined input-class=mx-3').props('clearable') \
                     .classes('w-full self-center').bind_value(app.storage.user, 'text').on('keydown.enter', send)
-                send_btn = ui.button(icon="send", on_click=lambda: send())
-                copy_btn = ui.button(icon="content_copy", on_click=lambda: copy_data())
-                delete_btn = ui.button(icon="delete_forever", on_click=lambda: delete_chat())
-                #update_btn = ui.button('Aktualisieren', on_click=lambda: chat_messages.refresh())
+                    send_btn = ui.button(icon="send", on_click=lambda: send())
+                    copy_btn = ui.button(icon="content_copy", on_click=lambda: copy_data())
+                    delete_btn = ui.button(icon="delete_forever", on_click=lambda: delete_chat())
+            
+                #Config options to create
+                with ui.row().classes('w-full no-wrap items-center'):
+                    config_lbl = ui.label('CSS').style('color: #000') #COLOR!
+                    config_lbl.set_text('custom config: ')  
+                    v = ui.checkbox('custom config', value=False)
+                with ui.row().classes('w-full no-wrap items-center').bind_visibility_from(v, 'value'):
+                    temp_lbl = ui.label('CSS').style('color: #000') #COLOR!
+                    temp_lbl.set_text('Temperature: ')
+                    temp_sld = ui.slider(min=0, max=100, value=os.getenv('TEMPERATURE',default=0.7)*100).bind_value(app.storage.user, 'temperature')
+                    temp_val_lbl = ui.label('CSS').style('color: #000') #COLOR!
+                    temp_val_lbl.bind_text_from(app.storage.user, 'temperature', lambda x: x/100)
+
+                with ui.row().classes('w-full no-wrap items-center').bind_visibility_from(v, 'value'):
+                    max_tokens_lbl = ui.label('CSS').style('color: #000') #COLOR!
+                    max_tokens_lbl.set_text('Max Tokens: ')
+                    max_tokens_sld = ui.slider(min=0, max=4096, value=os.getenv('MAX_TOKENS',default=1024)).bind_value(app.storage.user, 'max_tokens')
+                    max_tokens_val_lbl = ui.label('CSS').style('color: #000') #COLOR!
+                    max_tokens_val_lbl.bind_text_from(app.storage.user, 'max_tokens')
+
+                with ui.row().classes('w-full no-wrap items-center').bind_visibility_from(v, 'value'):
+                    top_k_lbl = ui.label('CSS').style('color: #000') #COLOR!
+                    top_k_lbl.set_text('Top k: ')
+                    top_k_sld = ui.slider(min=0, max=100, value=os.getenv('TOP_K',default=40)).bind_value(app.storage.user, 'top_k')
+                    top_k_val_lbl = ui.label('CSS').style('color: #000') #COLOR!
+                    top_k_val_lbl.bind_text_from(app.storage.user, 'top_k')
+
+                with ui.row().classes('w-full no-wrap items-center').bind_visibility_from(v, 'value'):
+                    top_p_lbl = ui.label('CSS').style('color: #000') #COLOR!
+                    top_p_lbl.set_text('Top p: ')
+                    top_p_sld = ui.slider(min=0, max=100, value=os.getenv('TOP_P',default=0.8)*100).bind_value(app.storage.user, 'top_p')
+                    top_p_val_lbl = ui.label('CSS').style('color: #000') #COLOR!
+                    top_p_val_lbl.bind_text_from(app.storage.user, 'top_p',lambda x: x/100)
+
+                with ui.row().classes('w-full no-wrap items-center').bind_visibility_from(v, 'value'):
+                    repeat_penalty_lbl = ui.label('CSS').style('color: #000') #COLOR!
+                    repeat_penalty_lbl.set_text('Repeat penalty: ')
+                    repeat_penalty_sld = ui.slider(min=0, max=200, value=os.getenv('REPEAT_PENALTY',default=1.15)*100).bind_value(app.storage.user, 'repeat_penalty')
+                    repeat_penalty_val_lbl = ui.label('CSS').style('color: #000') #COLOR!
+                    repeat_penalty_val_lbl.bind_text_from(app.storage.user, 'repeat_penalty',lambda x: x/100)
                 
+                with ui.row().classes('w-full no-wrap items-center').bind_visibility_from(v, 'value'):                   
+                    reset_btn = ui.button(text="reset", on_click=lambda: reset_config())
                 
-            #ui.markdown('simple chat app built with [NiceGUI](https://nicegui.io)') \
-            #    .classes('text-xs self-end mr-8 m-[-1em] text-primary')
+                    
+                    
 
     @ui.page('/')
     def home():
