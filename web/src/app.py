@@ -18,20 +18,35 @@ import frontend
 import threading
 import queue
 
+from pdfrag import PDF_Processor
+
 class jobStatus():
 
     def __init__(self):
         self.jobsByToken = {}
+        self.pdfProcByToken = {}
 
-    def addJob(self,token,uuid,prompt,custom_config = False):
+
+    def addPDFProc(self,token,uuid,pdfproc):
+        if token in self.pdfProcByToken:
+            self.pdfProcByToken[token][uuid] = pdfproc
+        else:
+            self.pdfProcByToken[token] = {uuid:pdfproc}
+    
+    def getPDFProc(self,token,uuid):
+        if token in self.pdfProcByToken and uuid in self.pdfProcByToken[token]: 
+            return self.pdfProcByToken[token][uuid]
+        return False
+
+    def addJob(self,token,uuid,prompt,custom_config = False, job_type = 'chat'):
         try: 
             if token in self.jobsByToken:
                 if uuid in self.jobsByToken[token]:
-                    self.jobsByToken[token][uuid] = {'status':'queued','prompt':self.jobsByToken[token][uuid]['prompt'] + [prompt],'answer':self.jobsByToken[token][uuid]['answer'],'custom_config':custom_config} 
+                    self.jobsByToken[token][uuid] = {'status':'queued','prompt':self.jobsByToken[token][uuid]['prompt'] + [prompt],'answer':self.jobsByToken[token][uuid]['answer'],'custom_config':custom_config,'job_type':job_type} 
                 else:
-                    self.jobsByToken[token][uuid] = {'status':'queued','prompt':[prompt],'answer':[],'custom_config':custom_config} 
+                    self.jobsByToken[token][uuid] = {'status':'queued','prompt':[prompt],'answer':[],'custom_config':custom_config,'job_type':job_type} 
             else:
-                self.jobsByToken[token] = {uuid:{'status':'queued','prompt':[prompt],'answer':[],'custom_config':custom_config}} 
+                self.jobsByToken[token] = {uuid:{'status':'queued','prompt':[prompt],'answer':[],'custom_config':custom_config,'job_type':job_type}} 
         except:
             return False
     def countQueuedJobs(self):
@@ -51,6 +66,8 @@ class jobStatus():
             if token in self.jobsByToken:
                 if uuid in self.jobsByToken[token]:
                     del self.jobsByToken[token][uuid]
+                    if token in self.pdfProcByToken and uuid in self.pdfProcByToken[token]:
+                        del self.pdfProcByToken[token][uuid]
                     return True
             return False
         except:
@@ -60,6 +77,7 @@ class jobStatus():
         try:
             if uuid == 'All':
                 self.jobsByToken = {}
+                self.pdfProcByToken = {}
                 return True
             else:
                 for token in self.jobsByToken:
@@ -87,13 +105,14 @@ class jobStatus():
         try:
             if token in self.jobsByToken:
                 if uuid in self.jobsByToken[token]:
-                    if 'answer' in self.jobsByToken[token][uuid]:
+                    if 'answer' in self.jobsByToken[token][uuid] and self.jobsByToken[token][uuid]['answer'] :
                         self.jobsByToken[token][uuid]['answer'][-1] = answer
                     else:
                         self.jobsByToken[token][uuid]['answer'] = [answer]
                     return True
             return False
-        except:
+        except Exception as error:
+            print(error)
             return False
     
     
@@ -141,55 +160,130 @@ class jobStatus():
             
   
 class MainProcessor (threading.Thread):
-    def __init__(self,taskLock,taskQueue):
+    def __init__(self,taskLock,taskQueue,jobStat):
         super().__init__(target="MainProcessor")
        
         self.taskLock = taskLock
         self.taskQueue = taskQueue
+        self.jobStat = jobStat
         
     def run(self):
         while True:
             job = self.taskQueue.get(block=True)
-            jobStat.updateStatus(job['token'],job['uuid'],"processing")
-            item = jobStat.getJobStatus(job['token'],job['uuid'])
+            self.jobStat.updateStatus(job['token'],job['uuid'],"processing")
+            item = self.jobStat.getJobStatus(job['token'],job['uuid'])
             
-            prompts = item['prompt']
-            answers = []
-            if 'answer' in item:
-                answers = item['answer']
-            
-            i_p = 0
-            i_a = 0
-            instruction = ""
-            while i_p < len(prompts):
-                instruction += "USER:  " + prompts[i_p]
-                if i_a < len(answers):
-                    instruction += "ASSISTANT:  " + answers[i_a]
-                i_p += 1
-                i_a += 1
-            
-            if len(instruction) >= 2000:
-                instruction = instruction[-2000:]
-            chatprompt = os.getenv('CHATPROMPT',default="Du bist ein hilfreicher Assistent.")
-            prompt = f"{chatprompt} {instruction} ASSISTANT:"
-            
-            response = ""
-            jobStat.addAnswer(job['token'],job['uuid'],response)
-            try:
-                if item['custom_config']:
-                    answer = llm(prompt, stream=True, temperature = item['custom_config']['temperature'], max_tokens = item['custom_config']['max_tokens'], top_k=item['custom_config']['top_k'], top_p=item['custom_config']['top_p'],repeat_penalty=item['custom_config']['repeat_penalty'])
+            if 'job_type' in item and item['job_type'] == 'pdf_processing':
+                if 'filepath' in job:
+                    filepath = job['filepath']
+                    pdfProc = self.jobStat.getPDFProc(job['token'],job['uuid'])
+                    if not pdfProc:
+                        pdfProc = PDF_Processor()
+                        self.jobStat.addPDFProc(job['token'],job['uuid'],pdfProc)
+                    pdfProc.processPDF(filepath)
+                    self.jobStat.updateStatus(job['token'],job['uuid'],"finished")
+
+            else:
+                if 'job_type' in item and item['job_type'] == 'pdf_chat':
+                    response = ""
+                    self.jobStat.addAnswer(job['token'],job['uuid'],response)
+                    pdfProc = self.jobStat.getPDFProc(job['token'],job['uuid'])
+                    if not pdfProc:
+                        self.jobStat.updateStatus(job['token'],job['uuid'],"failed")
+                    else:
+                        answer = pdfProc.askPDF(item['prompt'][-1])
+                        #print(answer)
+                        #answer.print_response_stream()
+                        for answ in answer:
+                            
+                            #print(answ)
+                            #res = answ#answ['choices'][0]['text'] 
+                            response += answ
+                            if not self.jobStat.updateAnswer(job['token'],job['uuid'],response):
+                                break
+                        print(response)
+                        metadatas = pdfProc.getLastResponseMetaData()
+                        response = response + "(vgl. "
+                        for metadata in metadatas:
+                            source = metadata['source'] if 'source' in metadata else '?'
+                            name = metadata['file_path'] if 'file_path' in metadata else '?'
+                            if '/' in name:
+                                name = name.split('/')[-1]
+
+                            response = response + name +":"+str(source)
+
+                            
+                        response = response + ")"
+                        self.jobStat.updateAnswer(job['token'],job['uuid'],response)  
+                        self.jobStat.updateStatus(job['token'],job['uuid'],"finished")
+                        pdfProc.getLastResponseMetaData()
                 else:
-                    answer = llm(prompt, stream=True, temperature = 0.7, max_tokens = 1024, top_k=20, top_p=0.9,repeat_penalty=1.15)
+                    if 'job_type' in item and item['job_type'] == 'pdf_summarize':
+
+                        pdfProc = self.jobStat.getPDFProc(job['token'],job['uuid'])
+                        if not pdfProc:
+                            self.jobStat.updateStatus(job['token'],job['uuid'],"failed")
+                        else:
+                            
+                            for text, name, source in pdfProc.getNodesContents():
+                                response = ""
+                                self.jobStat.addAnswer(job['token'],job['uuid'],response)
+                                
+                                prompt = f"Ihre Aufgabe ist es, eine kurze Inhaltsangabe des folgenden Textes in maximal drei Sätzen zu schreiben. Schreiben Sie nichts, wenn es sich nur um ein Inhaltsverzeichnis oder bibliografische Informationen handelt. Der Text ist in dreifachen Aposthrophen '''TEXT''' eingefasst: '''{text}'''. Schreiben Sie eine kurze Inhaltsangabe in maximal drei Sätzen. ASSISTANT:"
+                                try:
+                                    answer = llm(prompt, stream=True, temperature = 0.1, max_tokens = 512) #top_k=20, top_p=0.9,repeat_penalty=1.15)
                 
-                for answ in answer:
-                    res = answ['choices'][0]['text'] 
-                    response += res
-                    if not jobStat.updateAnswer(job['token'],job['uuid'],response):
-                        break
-            except:
-                response = "An Error occured."
-            jobStat.updateAnswer(job['token'],job['uuid'],response)            
-            jobStat.updateStatus(job['token'],job['uuid'],"finished")
+                                    for answ in answer:
+                                        res = answ['choices'][0]['text'] 
+                                        response += res
+                                        if not self.jobStat.updateAnswer(job['token'],job['uuid'],response):
+                                            break
+                                except Exception as error:
+                                    print(error)
+                                    response = "An Error occured."
+                                self.jobStat.updateAnswer(job['token'],job['uuid'],response+"(Vgl. "+name+":"+source+")")
+                                            
+                            self.jobStat.updateStatus(job['token'],job['uuid'],"finished")
+                    
+                    else:
+
+                        prompts = item['prompt']
+                        answers = []
+                        if 'answer' in item:
+                            answers = item['answer']
+            
+                        i_p = 0
+                        i_a = 0
+                        instruction = ""
+                        while i_p < len(prompts):
+                            instruction += "USER:  " + prompts[i_p]
+                            if i_a < len(answers):
+                                instruction += "ASSISTANT:  " + answers[i_a]
+                            i_p += 1
+                            i_a += 1
+            
+                        if len(instruction) >= 20000:
+                            instruction = instruction[-20000:]
+                        chatprompt = os.getenv('CHATPROMPT',default="Du bist ein hilfreicher Assistent.")
+                        prompt = f"{chatprompt} {instruction} ASSISTANT:"
+            
+                        response = ""
+                        self.jobStat.addAnswer(job['token'],job['uuid'],response)
+                        try:
+                            if item['custom_config']:
+                                answer = llm(prompt, stream=True, temperature = item['custom_config']['temperature'], max_tokens = item['custom_config']['max_tokens'], top_k=item['custom_config']['top_k'], top_p=item['custom_config']['top_p'],repeat_penalty=item['custom_config']['repeat_penalty'])
+                            else:
+                                answer = llm(prompt, stream=True, temperature = 0.7, max_tokens = 1024, top_k=20, top_p=0.9,repeat_penalty=1.15)
+                
+                            for answ in answer:
+                                res = answ['choices'][0]['text'] 
+                                response += res
+                                if not self.jobStat.updateAnswer(job['token'],job['uuid'],response):
+                                    break
+                        except:
+                            response = "An Error occured."
+                        self.jobStat.updateAnswer(job['token'],job['uuid'],response)            
+                        self.jobStat.updateStatus(job['token'],job['uuid'],"finished")
 
 
 
@@ -242,7 +336,7 @@ jobStat = jobStatus()
 taskLock = threading.Lock()
 taskQueue = queue.Queue(1000)
 
-thread = MainProcessor(taskLock,taskQueue)
+thread = MainProcessor(taskLock,taskQueue,jobStat)
 thread.start()
 
 

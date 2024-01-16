@@ -1,0 +1,6 @@
+llama_index
+sentencepiece
+llama_hub
+PyMuPDF
+
+
