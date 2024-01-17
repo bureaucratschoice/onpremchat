@@ -224,7 +224,7 @@ class MainProcessor (threading.Thread):
                         if not pdfProc:
                             self.jobStat.updateStatus(job['token'],job['uuid'],"failed")
                         else:
-                            
+                            set_break = False
                             for text, name, source in pdfProc.getNodesContents():
                                 response = ""
                                 self.jobStat.addAnswer(job['token'],job['uuid'],response)
@@ -237,11 +237,17 @@ class MainProcessor (threading.Thread):
                                         res = answ['choices'][0]['text'] 
                                         response += res
                                         if not self.jobStat.updateAnswer(job['token'],job['uuid'],response):
+                                            set_break = True
                                             break
+                                            
+                                
                                 except Exception as error:
                                     print(error)
                                     response = "An Error occured."
+                                    
                                 self.jobStat.updateAnswer(job['token'],job['uuid'],response+"(Vgl. "+name+":"+source+")")
+                                if set_break:
+                                    break
                                             
                             self.jobStat.updateStatus(job['token'],job['uuid'],"finished")
                     

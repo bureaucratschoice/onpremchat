@@ -9,6 +9,7 @@ class SimplePdfSummarizer(threading.Thread):
         self.finished_callback = finished_callback
 
     def run(self):
+        set_break = False
         for text, name, source in pdfProc.getNodesContents():
             response = ""
             self.update_callback(self.token,self.uuid,response)                    
@@ -20,12 +21,14 @@ class SimplePdfSummarizer(threading.Thread):
                     res = answ['choices'][0]['text'] 
                     response += res
                     if not self.update_callback(self.token,self.uuid,response):
+                        set_break = True
                         break
             except Exception as error:
                 print(error)
                 response = "An Error occured."
             self.update_callback(self.token,self.uuid,response+"(Vgl. "+name+":"+source+")")
-                                            
+            if set_break:
+                break                                
         self.finished_callback(self.token,self.uuid)
 
 class SimplePdfTopicModeller(threading.Thread):
