@@ -1,2 +1,2 @@
-FROM bureaucratschoice/onpremchat:testing
+FROM bureaucratschoice/onpremchat:dev
 ADD ./src/  /app  

@@ -61,6 +61,29 @@ class OwnRetriever(BaseRetriever):
 
         return nodes_with_scores
 
+    def retrieve(self,query_str):
+        query_embedding = self._embed_model.get_query_embedding(query_str)
+        vector_store_query = VectorStoreQuery(
+            query_embedding=query_embedding,
+            similarity_top_k=self._similarity_top_k,
+            mode=self._query_mode,
+        )
+        query_result = self._vector_store.query(vector_store_query)
+        if query_result.nodes == None:
+          query_result.nodes = []
+          for id in query_result.ids:
+            for node in self._nodes:
+              if node.node_id == id :
+                query_result.nodes.append(node)
+        nodes_with_scores = []
+        for index, node in enumerate(query_result.nodes):
+            score: Optional[float] = None
+            if query_result.similarities is not None:
+                score = query_result.similarities[index]
+            nodes_with_scores.append(NodeWithScore(node=node, score=score))
+
+        return nodes_with_scores
+
 class PDF_Processor():
     def __init__(self):
 
@@ -71,7 +94,7 @@ class PDF_Processor():
         # optionally, you can set the path to a pre-downloaded model instead of model_url
         model_path=os.getenv('MODEL_BIN_PATH',default="/models/em_german_leo_mistral.Q5_K_S.gguf"),
         temperature=0.1,
-        max_new_tokens=1024,
+        max_new_tokens=512,
         # llama2 has a context window of 4096 tokens, but we set it lower to allow for some wiggle room
         context_window=3900,
         # kwargs to pass to __call__()
@@ -88,7 +111,7 @@ class PDF_Processor():
 
         self.vector_store = SimpleVectorStore()
         self.text_parser = SentenceSplitter(
-            chunk_size=1024,
+            chunk_size=3900,
             # separator=" ",
         )
 
@@ -96,6 +119,9 @@ class PDF_Processor():
         self.filepathes = []
         self.last_response = ""
 
+    def get_num_tokens(self,str):
+        #return self.llm.get_num_tokens(str)
+        return len(str.split(" "))
     def removeFiles(self):
         for filepath in self.filepathes:
             if os.path.isdir(filepath):
@@ -172,6 +198,14 @@ class PDF_Processor():
         self.last_response = response
         return response.response_gen
 
+    def getTopSimilar(self,question,top_k=1):
+        retriever = OwnRetriever(
+            self.vector_store, self.embed_model, self.nodes, query_mode="default", similarity_top_k=top_k
+        )
+        nodes_with_scores = retriever.retrieve(question)
+        print(nodes_with_scores)
+        return nodes_with_scores
+
     def getLastResponseMetaData(self):
         if self.last_response:
             metadatas = []
@@ -183,7 +217,10 @@ class PDF_Processor():
     def getNodesContents(self):
         for node in self.nodes:
             content = node.get_content()
-            name = str(node.metadata['name']) if 'name' in node.metadata else 'unknown'
+            print(node.metadata)
+            name = str(node.metadata['file_path']) if 'file_path' in node.metadata else 'unknown'
+            if '/' in name:
+                name = name.split('/')[-1]
             source = str(node.metadata['source']) if 'source' in node.metadata else 'unknown'
             yield content, name, source
 

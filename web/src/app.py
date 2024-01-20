@@ -17,8 +17,14 @@ import frontend
 
 import threading
 import queue
+import pdftools
+
 
 from pdfrag import PDF_Processor
+
+
+
+
 
 class jobStatus():
 
@@ -219,38 +225,14 @@ class MainProcessor (threading.Thread):
                         pdfProc.getLastResponseMetaData()
                 else:
                     if 'job_type' in item and item['job_type'] == 'pdf_summarize':
-
-                        pdfProc = self.jobStat.getPDFProc(job['token'],job['uuid'])
-                        if not pdfProc:
-                            self.jobStat.updateStatus(job['token'],job['uuid'],"failed")
-                        else:
-                            set_break = False
-                            for text, name, source in pdfProc.getNodesContents():
-                                response = ""
-                                self.jobStat.addAnswer(job['token'],job['uuid'],response)
-                                
-                                prompt = f"Ihre Aufgabe ist es, eine kurze Inhaltsangabe des folgenden Textes in maximal drei Sätzen zu schreiben. Schreiben Sie nichts, wenn es sich nur um ein Inhaltsverzeichnis oder bibliografische Informationen handelt. Der Text ist in dreifachen Aposthrophen '''TEXT''' eingefasst: '''{text}'''. Schreiben Sie eine kurze Inhaltsangabe in maximal drei Sätzen. ASSISTANT:"
-                                try:
-                                    answer = llm(prompt, stream=True, temperature = 0.1, max_tokens = 512) #top_k=20, top_p=0.9,repeat_penalty=1.15)
-                
-                                    for answ in answer:
-                                        res = answ['choices'][0]['text'] 
-                                        response += res
-                                        if not self.jobStat.updateAnswer(job['token'],job['uuid'],response):
-                                            set_break = True
-                                            break
-                                            
-                                
-                                except Exception as error:
-                                    print(error)
-                                    response = "An Error occured."
-                                    
-                                self.jobStat.updateAnswer(job['token'],job['uuid'],response+"(Vgl. "+name+":"+source+")")
-                                if set_break:
-                                    break
-                                            
-                            self.jobStat.updateStatus(job['token'],job['uuid'],"finished")
-                    
+                        pdf_proc = self.jobStat.getPDFProc(job['token'],job['uuid'])
+                        self.jobStat.addAnswer(job['token'],job['uuid'],"")
+                        create_callback = lambda x : self.jobStat.addAnswer(job['token'],job['uuid'],x)
+                        update_callback = lambda x : self.jobStat.updateAnswer(job['token'],job['uuid'],x)
+                        status_callback = lambda x : self.jobStat.updateStatus(job['token'],job['uuid'],x)
+                        summarizer = pdftools.SimplePdfSummarizer(llm,pdf_proc,create_callback,update_callback,status_callback)
+                        summarizer.run()
+                       
                     else:
 
                         prompts = item['prompt']
