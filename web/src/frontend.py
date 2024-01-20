@@ -221,8 +221,8 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
     def home():
         tochat = os.getenv('TOCHAT',default="Zum Chat")
         ui.button(tochat, on_click=lambda: ui.open(show, new_tab=False))
-    
-
+        topdf = os.getenv('TOPDF',default="Zu den PDF-Werkzeugen")
+        ui.button(topdf, on_click=lambda: ui.open(pdfpage, new_tab=False))
     @ui.page('/pdf')
     def pdfpage():
 
@@ -454,8 +454,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
                     repeat_penalty_val_lbl = ui.label('CSS').style('color: #000') 
                     repeat_penalty_val_lbl.bind_text_from(app.storage.user, 'repeat_penalty',lambda x: x/100)
                 
-                with ui.row().classes('w-full no-wrap items-center').bind_visibility_from(v, 'value'):                   
-                    reset_btn = ui.button(text="reset", on_click=lambda: reset_config())
+            
                 '''
     
 
