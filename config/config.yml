@@ -1,0 +1,9 @@
+prompts:
+  chatprompt: Du bist ein hilfreicher Assistent.
+
+frontend:
+  assistent: "Assinstent:in"
+  you: Sie
+  chat-greeting:
+  pdf-greeting:
+  pdf-preprocessing:
