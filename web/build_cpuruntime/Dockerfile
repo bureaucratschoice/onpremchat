@@ -17,9 +17,6 @@ RUN apt-get update \
 
 WORKDIR /app
 RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install --no-cache-dir -r pdfrag_requirements.txt
-RUN pip install evaluate
-RUN pip install rouge_score
 #RUN CMAKE_ARGS="-DLLAMA_CUBLAS=on" FORCE_CMAKE=1 pip install llama-cpp-python
 EXPOSE 80
 

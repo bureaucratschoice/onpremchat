@@ -19,7 +19,6 @@ RUN apt-get update \
 WORKDIR /app
 ADD ./src/ /app
 RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install --no-cache-dir -r pdfrag_requirements.txt
 ENV CMAKE_ARGS="-DLLAMA_CUBLAS=ON"
 ENV FORCE_CMAKE=1 
 RUN CMAKE_ARGS="-DLLAMA_CUBLAS=ON" FORCE_CMAKE=1 pip install --upgrade --force-reinstall llama-cpp-python --no-cache-dir
