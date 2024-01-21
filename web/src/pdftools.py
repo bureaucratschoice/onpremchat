@@ -1,5 +1,5 @@
 import threading
-import evaluate
+#import evaluate
 from rouge_score import rouge_scorer
 import os
 class SimplePdfSummarizer():#threading.Thread):
