@@ -41,7 +41,7 @@ class SimplePdfSummarizer():#threading.Thread):
         total_text = ""
         names = []
         sources = []
-        for text, name, source in self.content_gen():
+        for text, name, source in self.content_gen:
             snippet_tokens = len(self.llm.tokenize(text.encode(encoding = 'UTF-8', errors = 'strict')))
             if snippet_tokens + total_tokens > int(os.getenv('NUMBER_OF_TOKENS_PDF',default=3800)):
                 ##TODO Store current text for next round. Best at and of branch
