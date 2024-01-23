@@ -231,9 +231,14 @@ class MainProcessor (threading.Thread):
                         create_callback = lambda x : self.jobStat.addAnswer(job['token'],job['uuid'],x)
                         update_callback = lambda x : self.jobStat.updateAnswer(job['token'],job['uuid'],x)
                         status_callback = lambda x : self.jobStat.updateStatus(job['token'],job['uuid'],x)
-                        summarizer = pdftools.SimplePdfSummarizer(llm,pdf_proc,create_callback,update_callback,status_callback)
-                        summarizer.run()
-                       
+                        if 'summarizer' in job:
+                            summarizer = job['summarizer']
+                        else:
+                            summarizer = pdftools.SimplePdfSummarizer(llm,pdf_proc,create_callback,update_callback,status_callback)
+                        if not summarizer.run():
+                            print('putting summarizer again')
+                            self.taskQueue.put({'token':job['token'],'uuid':job['uuid'],'summarizer':summarizer})
+
                     else:
 
                         prompts = item['prompt']

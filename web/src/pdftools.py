@@ -6,10 +6,10 @@ class SimplePdfSummarizer():#threading.Thread):
     def __init__(self,llm,pdf_proc,create_callback,update_callback,status_callback):
         #super().__init__(target="SimplePDFSummarizer")
         self.llm = llm
-        self.pdf_proc = pdf_proc
         self.create_callback = create_callback
         self.update_callback = update_callback
         self.status_callback = status_callback
+        self.content_gen = pdf_proc.getNodesContents()
     
     def summarizeSnippet(self,snippet,names,sources):
         response = ""
@@ -41,7 +41,7 @@ class SimplePdfSummarizer():#threading.Thread):
         total_text = ""
         names = []
         sources = []
-        for text, name, source in self.pdf_proc.getNodesContents():
+        for text, name, source in self.content_gen():
             snippet_tokens = len(self.llm.tokenize(text.encode(encoding = 'UTF-8', errors = 'strict')))
             if snippet_tokens + total_tokens > int(os.getenv('NUMBER_OF_TOKENS_PDF',default=3800)):
                 ##TODO Store current text for next round. Best at and of branch
@@ -50,16 +50,18 @@ class SimplePdfSummarizer():#threading.Thread):
                 total_tokens = snippet_tokens
                 total_text = text
                 names = [name]
-                sources = [source]                                
+                sources = [source]
+                return False                                
             else:
                 total_tokens += snippet_tokens
                 total_text += "\n" + text
                 if not name in names:
                     names.append(name)
-                sources.append(source)
+                sources.append(source)           
+        
         self.summarizeSnippet(total_text,names,sources)
-
         self.status_callback("finished")
+        return True
 
 class SimplePdfTopicModeller(threading.Thread):
     def __init__(self,llm,pdf_proc,create_callback,update_callback,status_callback):
