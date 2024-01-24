@@ -2,14 +2,19 @@ import threading
 #import evaluate
 from rouge_score import rouge_scorer
 import os
-class SimplePdfSummarizer():#threading.Thread):
+class SimplePdfSummarizer():
     def __init__(self,llm,pdf_proc,create_callback,update_callback,status_callback):
-        #super().__init__(target="SimplePDFSummarizer")
         self.llm = llm
         self.create_callback = create_callback
         self.update_callback = update_callback
         self.status_callback = status_callback
         self.content_gen = pdf_proc.getNodesContents()
+        
+        #Info needed to summarize multiple pages until token limit
+        self.total_tokens = 0
+        self.total_text = ""
+        self.names = []
+        self.sources = []
     
     def summarizeSnippet(self,snippet,names,sources):
         response = ""
@@ -36,30 +41,26 @@ class SimplePdfSummarizer():#threading.Thread):
 
 
     def run(self):
-        set_break = False
-        total_tokens = 0
-        total_text = ""
-        names = []
-        sources = []
+        #set_break = False
+
         for text, name, source in self.content_gen:
             snippet_tokens = len(self.llm.tokenize(text.encode(encoding = 'UTF-8', errors = 'strict')))
-            if snippet_tokens + total_tokens > int(os.getenv('NUMBER_OF_TOKENS_PDF',default=3800)):
-                ##TODO Store current text for next round. Best at and of branch
-                if not self.summarizeSnippet(total_text,names,sources):
+            if snippet_tokens + self.total_tokens > int(os.getenv('NUMBER_OF_TOKENS_PDF',default=3800)):
+                if not self.summarizeSnippet(self.total_text,self.names,self.sources):
                     break
-                total_tokens = snippet_tokens
-                total_text = text
-                names = [name]
-                sources = [source]
+                self.total_tokens = snippet_tokens
+                self.total_text = text
+                self.names = [name]
+                self.sources = [source]
                 return False                                
             else:
-                total_tokens += snippet_tokens
-                total_text += "\n" + text
-                if not name in names:
-                    names.append(name)
-                sources.append(source)           
+                self.total_tokens += snippet_tokens
+                self.total_text += "\n" + text
+                if not name in self.names:
+                    self.names.append(name)
+                self.sources.append(source)           
         
-        self.summarizeSnippet(total_text,names,sources)
+        self.summarizeSnippet(self.total_text,self.names,self.sources)
         self.status_callback("finished")
         return True
 
