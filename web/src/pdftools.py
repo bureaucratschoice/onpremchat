@@ -2,6 +2,7 @@ import threading
 #import evaluate
 from rouge_score import rouge_scorer
 import os
+import ast
 class SimplePdfSummarizer():
     def __init__(self,llm,pdf_proc,create_callback,update_callback,status_callback):
         self.llm = llm
@@ -61,6 +62,77 @@ class SimplePdfSummarizer():
                 self.sources.append(source)           
         
         self.summarizeSnippet(self.total_text,self.names,self.sources)
+        self.status_callback("finished")
+        return True
+
+class SimpleGraphExtractor():
+    def __init__(self,llm,pdf_proc,create_callback,update_callback,status_callback):
+        self.llm = llm
+        self.create_callback = create_callback
+        self.update_callback = update_callback
+        self.status_callback = status_callback
+        self.content_gen = pdf_proc.getNodesContents()
+        
+        #Info needed to summarize multiple pages until token limit
+        self.total_tokens = 0
+        self.total_text = ""
+        self.names = []
+        self.sources = []
+
+    def extractGraph(self,snippet,names,sources):
+        response = []
+        self.create_callback(response)                    
+        prompt = f"Sie sind ein Netzwerkgraphenersteller, der Begriffe aus einem gegebenen Kontext extrahiert. Sie erhalten ein Kontextstück (abgegrenzt durch '''). Ihre Aufgabe ist es, die Ontologie von Begriffen zu extrahieren, die in dem gegebenen Kontext erwähnt werden. Diese Begriffe sollten die Schlüsselkonzepte aus dem Kontext repräsentieren. \n /
+            Gedanke 1: Denken Sie beim Durchgehen jedes Satzes an die darin erwähnten Schlüsselbegriffe. \n /
+            \tDie Begriffe können Objekt, Einheit, Ort, Organisation, Person, \n /
+            \tBedingung, Akronym, Dokumente, Dienstleistung, Konzept, usw.\n /
+            \tBegriffe sollten so atomistisch wie möglich sein\n\n /
+            Formatieren Sie Ihre Ausgabe als Liste []. Jedes Element der Liste enthält einen Begriff , wie folgt: \n /
+            ['Konzept 1', 'Konzept 2', …] \n /
+            Kontext: '''{snippet}''' " 
+        try:
+            answer = self.llm(prompt, temperature = 0.1, max_tokens = 512) #top_k=20, top_p=0.9,repeat_penalty=1.15)
+            
+            try: 
+                l = ast.literal_eval(answer['choices'][0]['text'])
+                response.extend(l)
+            except Exception as error:
+                print(error)
+                response = "An Error occured."
+            if not self.update_callback(response):
+                return False
+        except Exception as error:
+            print(error)
+            response = "An Error occured."
+
+        scorer = rouge_scorer.RougeScorer(['rouge1', 'rougeL'], use_stemmer=True)
+        scores = scorer.score(snippet,response)
+        rouge1 = scores['rouge1'].fmeasure
+
+        self.update_callback(response+" (Vgl. "+str(names)+":"+str(sources[0]+"-"+sources[-1])+") (Score: "+str(round(rouge1,2))+")")
+        return True
+
+    def run(self):
+        #set_break = False
+
+        for text, name, source in self.content_gen:
+            snippet_tokens = len(self.llm.tokenize(text.encode(encoding = 'UTF-8', errors = 'strict')))
+            if snippet_tokens + self.total_tokens > int(os.getenv('NUMBER_OF_TOKENS_PDF',default=3800)):
+                if not self.extractGraph(self.total_text,self.names,self.sources):
+                    break
+                self.total_tokens = snippet_tokens
+                self.total_text = text
+                self.names = [name]
+                self.sources = [source]
+                return False                                
+            else:
+                self.total_tokens += snippet_tokens
+                self.total_text += "\n" + text
+                if not name in self.names:
+                    self.names.append(name)
+                self.sources.append(source)           
+        
+        self.extractGraph(self.total_text,self.names,self.sources)
         self.status_callback("finished")
         return True
 
