@@ -1,4 +1,4 @@
-FROM python:3.10-slim-bullseye
+FROM python:3.10-slim-bullseye as builder
 
 WORKDIR /app
 ADD ./src/ /app
@@ -18,6 +18,13 @@ RUN apt-get update \
 WORKDIR /app
 RUN pip install --no-cache-dir -r requirements.txt
 #RUN CMAKE_ARGS="-DLLAMA_CUBLAS=on" FORCE_CMAKE=1 pip install llama-cpp-python
+
+FROM python:3.10-slim-bullseye
+
+COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
+WORKDIR /app
+ADD ./src /app
+
 EXPOSE 80
 
 ENV PYTHONDONTWRITEBYTECODE=1
