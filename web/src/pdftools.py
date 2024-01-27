@@ -82,14 +82,14 @@ class SimpleGraphExtractor():
     def extractGraph(self,snippet,names,sources):
         response = []
         self.create_callback(response)                    
-        prompt = f"Sie sind ein Netzwerkgraphenersteller, der Begriffe aus einem gegebenen Kontext extrahiert. Sie erhalten ein Kontextstück (abgegrenzt durch '''). Ihre Aufgabe ist es, die Ontologie von Begriffen zu extrahieren, die in dem gegebenen Kontext erwähnt werden. Diese Begriffe sollten die Schlüsselkonzepte aus dem Kontext repräsentieren. \n /
-            Gedanke 1: Denken Sie beim Durchgehen jedes Satzes an die darin erwähnten Schlüsselbegriffe. \n /
-            \tDie Begriffe können Objekt, Einheit, Ort, Organisation, Person, \n /
-            \tBedingung, Akronym, Dokumente, Dienstleistung, Konzept, usw.\n /
-            \tBegriffe sollten so atomistisch wie möglich sein\n\n /
-            Formatieren Sie Ihre Ausgabe als Liste []. Jedes Element der Liste enthält einen Begriff , wie folgt: \n /
-            ['Konzept 1', 'Konzept 2', …] \n /
-            Kontext: '''{snippet}''' " 
+        prompt = f"Sie sind ein Netzwerkgraphenersteller, der Begriffe aus einem gegebenen Kontext extrahiert. Sie erhalten ein Kontextstück (abgegrenzt durch '''). Ihre Aufgabe ist es, die Ontologie von Begriffen zu extrahieren, die in dem gegebenen Kontext erwähnt werden. Diese Begriffe sollten die Schlüsselkonzepte aus dem Kontext repräsentieren. \n "\
+            "Gedanke 1: Denken Sie beim Durchgehen jedes Satzes an die darin erwähnten Schlüsselbegriffe. \n " \
+            "\tDie Begriffe können Objekt, Einheit, Ort, Organisation, Person, \n " \
+            "\tBedingung, Akronym, Dokumente, Dienstleistung, Konzept, usw.\n " \
+            "\tBegriffe sollten so atomistisch wie möglich sein\n\n " \
+            "Formatieren Sie Ihre Ausgabe als Liste []. Jedes Element der Liste enthält einen Begriff , wie folgt: \n" \
+            "['Konzept 1', 'Konzept 2', …] \n "\
+            "Kontext: '''{snippet}''' " 
         try:
             answer = self.llm(prompt, temperature = 0.1, max_tokens = 512) #top_k=20, top_p=0.9,repeat_penalty=1.15)
             
