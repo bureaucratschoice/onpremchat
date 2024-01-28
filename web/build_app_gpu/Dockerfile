@@ -1,2 +1,2 @@
-FROM bureaucratschoice/onpremchat:latest-gpu
+FROM bureaucratschoice/onpremchat:testing-gpu
 ADD ./src/  /app  
