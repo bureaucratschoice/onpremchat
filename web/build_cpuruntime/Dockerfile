@@ -25,7 +25,7 @@ FROM python:3.10-slim-bullseye
 
 COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
-RUN rm -rf /usr/local/lib/python3.10/site-packages/nvidia*
+#RUN rm -rf /usr/local/lib/python3.10/site-packages/nvidia*
 WORKDIR /app
 ADD ./src /app
 
