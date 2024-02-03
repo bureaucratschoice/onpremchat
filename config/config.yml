@@ -1,9 +1,25 @@
-prompts:
+model:
   chatprompt: Du bist ein hilfreicher Assistent.
+  number_of_tokens_pdf: 512
+  temperature:
+  max_tokens:
+  top_k
+  top_p
+  repeat_penalty
+  model_download_url
+  model_bin_path
+  number_of_tokens
+  verbose
+  gpu_layers
 
 frontend:
-  assistent: "Assinstent:in"
+  assistant: "Assinstent:in"
   you: Sie
   chat-greeting:
   pdf-greeting:
   pdf-preprocessing:
+  app_title: "MWICHT"
+  to_chat: "Chat"
+  to_pdf: "PDF"
+
+
