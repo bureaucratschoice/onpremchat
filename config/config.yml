@@ -3,14 +3,14 @@ model:
   number_of_tokens_pdf: 512
   temperature:
   max_tokens:
-  top_k
-  top_p
-  repeat_penalty
-  model_download_url
-  model_bin_path
-  number_of_tokens
-  verbose
-  gpu_layers
+  top_k:
+  top_p:
+  repeat_penalty:
+  model_download_url:
+  model_bin_path:
+  number_of_tokens:
+  verbose:
+  gpu_layers:
 
 frontend:
   assistant: "Assinstent:in"
