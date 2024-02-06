@@ -1,9 +1,10 @@
 from llm import build_llm
-#from config import config_loader
+from config import config
 import requests
 import json
 print("start")
-llm = build_llm()
+cfg = config()
+llm = build_llm(cfg)
 
 
 from fastapi import FastAPI
@@ -258,7 +259,7 @@ class MainProcessor (threading.Thread):
             
                         if len(instruction) >= 20000:
                             instruction = instruction[-20000:]
-                        chatprompt = os.getenv('CHATPROMPT',default="Du bist ein hilfreicher Assistent.")
+                        chatprompt = os.getenv('CHATPROMPT',default=cfg.get_config('model','chatprompt',default="Du bist ein hilfreicher Assistent."))
                         prompt = f"{chatprompt} {instruction} ASSISTANT:"
             
                         response = ""

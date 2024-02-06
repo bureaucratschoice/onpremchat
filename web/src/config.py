@@ -21,5 +21,6 @@ class config:
             self.config[section][key] = value
         else:
             self.config[section] = {key:value}
+        self.store_config()
         
         

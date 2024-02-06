@@ -46,7 +46,7 @@ class SimplePdfSummarizer():
 
         for text, name, source in self.content_gen:
             snippet_tokens = len(self.llm.tokenize(text.encode(encoding = 'UTF-8', errors = 'strict')))
-            if snippet_tokens + self.total_tokens > int(os.getenv('NUMBER_OF_TOKENS_PDF',default=3800)):
+            if snippet_tokens + self.total_tokens > int(os.getenv('NUMBER_OF_TOKENS_PDF',default=cfg.get_config('model','number_of_tokens_pdf',default=3800))):
                 if not self.summarizeSnippet(self.total_text,self.names,self.sources):
                     break
                 self.total_tokens = snippet_tokens
@@ -117,7 +117,7 @@ class SimpleGraphExtractor():
 
         for text, name, source in self.content_gen:
             snippet_tokens = len(self.llm.tokenize(text.encode(encoding = 'UTF-8', errors = 'strict')))
-            if snippet_tokens + self.total_tokens > int(os.getenv('NUMBER_OF_TOKENS_PDF',default=3800)):
+            if snippet_tokens + self.total_tokens > int(os.getenv('NUMBER_OF_TOKENS_PDF',default=cfg.get_config('model','number_of_tokens_pdf',default=3800))):
                 if not self.extractGraph(self.total_text,self.names,self.sources):
                     break
                 self.total_tokens = snippet_tokens
