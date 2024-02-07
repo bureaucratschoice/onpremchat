@@ -235,7 +235,7 @@ class MainProcessor (threading.Thread):
                         if 'summarizer' in job:
                             summarizer = job['summarizer']
                         else:
-                            summarizer = pdftools.SimplePdfSummarizer(llm,pdf_proc,create_callback,update_callback,status_callback)
+                            summarizer = pdftools.SimplePdfSummarizer(llm,pdf_proc,create_callback,update_callback,status_callback,cfg)
                         if not summarizer.run():
                             print('putting summarizer again')
                             self.taskQueue.put({'token':job['token'],'uuid':job['uuid'],'summarizer':summarizer})
