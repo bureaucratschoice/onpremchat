@@ -26,7 +26,7 @@ def assign_uuid_if_missing():
     if not 'pdf_job' in app.storage.user or not app.storage.user['pdf_job']:
         app.storage.user['pdf_job'] = uuid4()
 
-def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
+def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
     assi = os.getenv('ASSISTANT',default=cfg.get_config('frontend','assistant',default="Assistent:in"))
     you = os.getenv('YOU',default=cfg.get_config('frontend','you',default="Sie"))
     greeting = os.getenv('GREETING',default=cfg.get_config('frontend','chat-greeting',default="Achtung, prüfen Sie jede Antwort bevor Sie diese in irgendeiner Form weiterverwenden. Je länger Ihre Frage ist bzw. je länger der bisherige Chatverlauf, desto länger brauche ich zum lesen. Es kann daher dauern, bis ich anfange Ihre Antwort zu schreiben. Die Länge der Warteschlange ist aktuell: "))

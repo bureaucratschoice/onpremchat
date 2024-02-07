@@ -418,4 +418,4 @@ async def generate_text(item: Item) -> Any:
         result = "Access denied."
     return result
 
-frontend.init(app,jobStat,taskQueue)
+frontend.init(app,jobStat,taskQueue,cfg)
