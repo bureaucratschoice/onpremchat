@@ -7,6 +7,7 @@ from fastapi import FastAPI
 import os
 import time
 from uuid import uuid4
+from pages.common_tools import assign_uuid_if_missing
 
 class InputText:
     def __init__(self):
@@ -20,11 +21,11 @@ class PDFReady:
         self.answered = False
         self.ready_to_upload = True
 
-def assign_uuid_if_missing():
-    if not 'chat_job' in app.storage.user or not app.storage.user['chat_job']:
-        app.storage.user['chat_job'] = uuid4()
-    if not 'pdf_job' in app.storage.user or not app.storage.user['pdf_job']:
-        app.storage.user['pdf_job'] = uuid4()
+#def assign_uuid_if_missing():
+#    if not 'chat_job' in app.storage.user or not app.storage.user['chat_job']:
+#        app.storage.user['chat_job'] = uuid4()
+#    if not 'pdf_job' in app.storage.user or not app.storage.user['pdf_job']:
+#        app.storage.user['pdf_job'] = uuid4()
 
 def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
     assi = os.getenv('ASSISTANT',default=cfg.get_config('frontend','assistant',default="Assistent:in"))
@@ -223,6 +224,8 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
         ui.button(tochat, on_click=lambda: ui.open(show, new_tab=False))
         topdf = os.getenv('TOPDF',default=cfg.get_config('frontend','to_pdf',default="Zu den PDF-Werkzeugen"))
         ui.button(topdf, on_click=lambda: ui.open(pdfpage, new_tab=False))
+
+
     @ui.page('/pdf')
     def pdfpage():
 
