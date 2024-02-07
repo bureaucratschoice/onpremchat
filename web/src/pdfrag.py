@@ -85,7 +85,7 @@ class OwnRetriever(BaseRetriever):
         return nodes_with_scores
 
 class PDF_Processor():
-    def __init__(self):
+    def __init__(self, cfg):
 
         self.embed_model = HuggingFaceEmbedding()
 

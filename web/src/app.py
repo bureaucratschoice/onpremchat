@@ -186,7 +186,7 @@ class MainProcessor (threading.Thread):
                     filepath = job['filepath']
                     pdfProc = self.jobStat.getPDFProc(job['token'],job['uuid'])
                     if not pdfProc:
-                        pdfProc = PDF_Processor()
+                        pdfProc = PDF_Processor(cfg)
                         self.jobStat.addPDFProc(job['token'],job['uuid'],pdfProc)
                     pdfProc.processPDF(filepath)
                     self.jobStat.updateStatus(job['token'],job['uuid'],"finished")
