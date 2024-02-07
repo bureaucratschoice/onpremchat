@@ -1,9 +1,10 @@
 from llm import build_llm
-#from config import config_loader
+from config import config
 import requests
 import json
 print("start")
-llm = build_llm()
+cfg = config()
+llm = build_llm(cfg)
 
 
 from fastapi import FastAPI
@@ -185,7 +186,7 @@ class MainProcessor (threading.Thread):
                     filepath = job['filepath']
                     pdfProc = self.jobStat.getPDFProc(job['token'],job['uuid'])
                     if not pdfProc:
-                        pdfProc = PDF_Processor()
+                        pdfProc = PDF_Processor(cfg)
                         self.jobStat.addPDFProc(job['token'],job['uuid'],pdfProc)
                     pdfProc.processPDF(filepath)
                     self.jobStat.updateStatus(job['token'],job['uuid'],"finished")
@@ -234,7 +235,7 @@ class MainProcessor (threading.Thread):
                         if 'summarizer' in job:
                             summarizer = job['summarizer']
                         else:
-                            summarizer = pdftools.SimplePdfSummarizer(llm,pdf_proc,create_callback,update_callback,status_callback)
+                            summarizer = pdftools.SimplePdfSummarizer(llm,pdf_proc,create_callback,update_callback,status_callback,cfg)
                         if not summarizer.run():
                             print('putting summarizer again')
                             self.taskQueue.put({'token':job['token'],'uuid':job['uuid'],'summarizer':summarizer})
@@ -258,7 +259,7 @@ class MainProcessor (threading.Thread):
             
                         if len(instruction) >= 20000:
                             instruction = instruction[-20000:]
-                        chatprompt = os.getenv('CHATPROMPT',default="Du bist ein hilfreicher Assistent.")
+                        chatprompt = os.getenv('CHATPROMPT',default=cfg.get_config('model','chatprompt',default="Du bist ein hilfreicher Assistent."))
                         prompt = f"{chatprompt} {instruction} ASSISTANT:"
             
                         response = ""
@@ -417,4 +418,4 @@ async def generate_text(item: Item) -> Any:
         result = "Access denied."
     return result
 
-frontend.init(app,jobStat,taskQueue)
+frontend.init(app,jobStat,taskQueue,cfg)

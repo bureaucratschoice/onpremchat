@@ -26,12 +26,12 @@ def assign_uuid_if_missing():
     if not 'pdf_job' in app.storage.user or not app.storage.user['pdf_job']:
         app.storage.user['pdf_job'] = uuid4()
 
-def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
-    assi = os.getenv('ASSISTANT',default="Assistent:in")
-    you = os.getenv('YOU',default="Sie")
-    greeting = os.getenv('GREETING',default="Achtung, prüfen Sie jede Antwort bevor Sie diese in irgendeiner Form weiterverwenden. Je länger Ihre Frage ist bzw. je länger der bisherige Chatverlauf, desto länger brauche ich zum lesen. Es kann daher dauern, bis ich anfange Ihre Antwort zu schreiben. Die Länge der Warteschlange ist aktuell: ")
-    pdf_greeting = os.getenv('PDFGREETING',default="Laden Sie ein PDF hoch, damit ich Ihnen Fragen hierzu beantworten kann. Achtung, prüfen Sie jede Antwort bevor Sie diese in irgendeiner Form weiterverwenden. Die Länge der Warteschlange ist aktuell: ")
-    pdf_processed = os.getenv('PDFPROC',default="Ihr PDF wird gerade verarbeitet. Der aktuelle Status ist: ")
+def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
+    assi = os.getenv('ASSISTANT',default=cfg.get_config('frontend','assistant',default="Assistent:in"))
+    you = os.getenv('YOU',default=cfg.get_config('frontend','you',default="Sie"))
+    greeting = os.getenv('GREETING',default=cfg.get_config('frontend','chat-greeting',default="Achtung, prüfen Sie jede Antwort bevor Sie diese in irgendeiner Form weiterverwenden. Je länger Ihre Frage ist bzw. je länger der bisherige Chatverlauf, desto länger brauche ich zum lesen. Es kann daher dauern, bis ich anfange Ihre Antwort zu schreiben. Die Länge der Warteschlange ist aktuell: "))
+    pdf_greeting = os.getenv('PDFGREETING',default=cfg.get_config('frontend','pdf-greeting',default="Laden Sie ein PDF hoch, damit ich Ihnen Fragen hierzu beantworten kann. Achtung, prüfen Sie jede Antwort bevor Sie diese in irgendeiner Form weiterverwenden. Die Länge der Warteschlange ist aktuell: "))
+    pdf_processed = os.getenv('PDFPROC',default=cfg.get_config('frontend','pdf-preprocessing',default="Ihr PDF wird gerade verarbeitet. Der aktuelle Status ist: "))
     pdf_ready = PDFReady()
     
     @ui.page('/chat')
@@ -122,11 +122,11 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
                 ui.run_javascript('navigator.clipboard.writeText(`' + text + '`)', timeout=5.0)
 
         def reset_config():
-            app.storage.user['temperature'] = os.getenv('TEMPERATURE',default=0.7)*100
-            app.storage.user['max_tokens'] = os.getenv('MAX_TOKENS',default=1024)
-            app.storage.user['top_k'] = os.getenv('TOP_K',default=40)
-            app.storage.user['top_p'] = os.getenv('TOP_P',default=0.8)*100
-            app.storage.user['repeat_penalty'] = os.getenv('REPEAT_PENALTY',default=1.15)*100
+            app.storage.user['temperature'] = os.getenv('TEMPERATURE',default=cfg.get_config('model','temperature',default=0.7))*100
+            app.storage.user['max_tokens'] = os.getenv('MAX_TOKENS',default=cfg.get_config('model','max_tokens',default=1024))
+            app.storage.user['top_k'] = os.getenv('TOP_K',default=cfg.get_config('model','top_k',default=40))
+            app.storage.user['top_p'] = os.getenv('TOP_P',default=cfg.get_config('model','top_p',default=0.8))*100
+            app.storage.user['repeat_penalty'] = os.getenv('REPEAT_PENALTY',default=cfg.get_config('model','repeat_penalty',default=1.15))*100
 
         async def send() -> None:
             assign_uuid_if_missing()
@@ -147,7 +147,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
 
         anchor_style = r'a:link, a:visited {color: inherit !important; text-decoration: none; font-weight: 500}'
         ui.add_head_html(f'<style>{anchor_style}</style>')
-        title = os.getenv('APP_TITLE',default="MWICHT")
+        title = os.getenv('APP_TITLE',default=cfg.get_config('frontend','app_title',default="MWICHT"))
 
         ui.page_title(title)
         # the queries below are used to expand the contend down to the footer (content can then use flex-grow to expand)
@@ -179,35 +179,35 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
                 with ui.row().classes('w-full no-wrap items-center').bind_visibility_from(v, 'value'):
                     temp_lbl = ui.label('CSS').style('color: #000')
                     temp_lbl.set_text('Temperature: ')
-                    temp_sld = ui.slider(min=0, max=100, value=os.getenv('TEMPERATURE',default=0.7)*100).bind_value(app.storage.user, 'temperature')
+                    temp_sld = ui.slider(min=0, max=100, value=os.getenv('TEMPERATURE',default=cfg.get_config('model','temperature',default=0.7))*100).bind_value(app.storage.user, 'temperature')
                     temp_val_lbl = ui.label('CSS').style('color: #000')
                     temp_val_lbl.bind_text_from(app.storage.user, 'temperature', lambda x: x/100)
 
                 with ui.row().classes('w-full no-wrap items-center').bind_visibility_from(v, 'value'):
                     max_tokens_lbl = ui.label('CSS').style('color: #000')
                     max_tokens_lbl.set_text('Max Tokens: ')
-                    max_tokens_sld = ui.slider(min=0, max=4096, value=os.getenv('MAX_TOKENS',default=1024)).bind_value(app.storage.user, 'max_tokens')
+                    max_tokens_sld = ui.slider(min=0, max=4096, value=os.getenv('MAX_TOKENS',default=cfg.get_config('model','max_tokens',default=1024))).bind_value(app.storage.user, 'max_tokens')
                     max_tokens_val_lbl = ui.label('CSS').style('color: #000')
                     max_tokens_val_lbl.bind_text_from(app.storage.user, 'max_tokens')
 
                 with ui.row().classes('w-full no-wrap items-center').bind_visibility_from(v, 'value'):
                     top_k_lbl = ui.label('CSS').style('color: #000') 
                     top_k_lbl.set_text('Top k: ')
-                    top_k_sld = ui.slider(min=0, max=100, value=os.getenv('TOP_K',default=40)).bind_value(app.storage.user, 'top_k')
+                    top_k_sld = ui.slider(min=0, max=100, value=os.getenv('TOP_K',default=cfg.get_config('model','top_k',default=40))).bind_value(app.storage.user, 'top_k')
                     top_k_val_lbl = ui.label('CSS').style('color: #000') 
                     top_k_val_lbl.bind_text_from(app.storage.user, 'top_k')
 
                 with ui.row().classes('w-full no-wrap items-center').bind_visibility_from(v, 'value'):
                     top_p_lbl = ui.label('CSS').style('color: #000') 
                     top_p_lbl.set_text('Top p: ')
-                    top_p_sld = ui.slider(min=0, max=100, value=os.getenv('TOP_P',default=0.8)*100).bind_value(app.storage.user, 'top_p')
+                    top_p_sld = ui.slider(min=0, max=100, value=os.getenv('TOP_P',default=cfg.get_config('model','top_p',default=0.8))*100).bind_value(app.storage.user, 'top_p')
                     top_p_val_lbl = ui.label('CSS').style('color: #000') 
                     top_p_val_lbl.bind_text_from(app.storage.user, 'top_p',lambda x: x/100)
 
                 with ui.row().classes('w-full no-wrap items-center').bind_visibility_from(v, 'value'):
                     repeat_penalty_lbl = ui.label('CSS').style('color: #000')
                     repeat_penalty_lbl.set_text('Repeat penalty: ')
-                    repeat_penalty_sld = ui.slider(min=0, max=200, value=os.getenv('REPEAT_PENALTY',default=1.15)*100).bind_value(app.storage.user, 'repeat_penalty')
+                    repeat_penalty_sld = ui.slider(min=0, max=200, value=os.getenv('REPEAT_PENALTY',default=cfg.get_config('model','repeat_penalty',default=1.15))*100).bind_value(app.storage.user, 'repeat_penalty')
                     repeat_penalty_val_lbl = ui.label('CSS').style('color: #000') 
                     repeat_penalty_val_lbl.bind_text_from(app.storage.user, 'repeat_penalty',lambda x: x/100)
                 
@@ -219,9 +219,9 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
 
     @ui.page('/')
     def home():
-        tochat = os.getenv('TOCHAT',default="Zum Chat")
+        tochat = os.getenv('TOCHAT',default=cfg.get_config('frontend','to_chat',default="Zum Chat"))
         ui.button(tochat, on_click=lambda: ui.open(show, new_tab=False))
-        topdf = os.getenv('TOPDF',default="Zu den PDF-Werkzeugen")
+        topdf = os.getenv('TOPDF',default=cfg.get_config('frontend','to_pdf',default="Zu den PDF-Werkzeugen"))
         ui.button(topdf, on_click=lambda: ui.open(pdfpage, new_tab=False))
     @ui.page('/pdf')
     def pdfpage():
@@ -397,7 +397,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
 
                 pdf_messages()
 
-                ui.upload(on_upload=handle_upload,multiple=True,label='Upload PDF').props('accept=.pdf').classes('max-w-full').bind_visibility_from(pdf_ready,'ready_to_upload')
+                ui.upload(on_upload=handle_upload,multiple=True,label='Upload PDF',max_total_size=9048576).props('accept=.pdf').classes('max-w-full').bind_visibility_from(pdf_ready,'ready_to_upload')
 
 
         with ui.footer().classes('bg-white'):
@@ -414,50 +414,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue) -> None:
                     summarize_btn = ui.button("summarize pdf", on_click=lambda: summarize_pdf()).bind_visibility_from(pdf_ready,'answered')
                     copy_btn = ui.button(icon="content_copy", on_click=lambda: copy_data())
                     delete_btn = ui.button(icon="delete_forever", on_click=lambda: delete_chat())
-                '''
-                with ui.row().classes('w-full no-wrap items-center'):
-                    config_lbl = ui.label('CSS').style('color: #000') 
-                    config_lbl.set_text('custom config: ')  
-                    v = ui.checkbox('custom config', value=False)
-                with ui.row().classes('w-full no-wrap items-center').bind_visibility_from(v, 'value'):
-                    temp_lbl = ui.label('CSS').style('color: #000')
-                    temp_lbl.set_text('Temperature: ')
-                    temp_sld = ui.slider(min=0, max=100, value=os.getenv('TEMPERATURE',default=0.7)*100).bind_value(app.storage.user, 'temperature')
-                    temp_val_lbl = ui.label('CSS').style('color: #000')
-                    temp_val_lbl.bind_text_from(app.storage.user, 'temperature', lambda x: x/100)
-
-                with ui.row().classes('w-full no-wrap items-center').bind_visibility_from(v, 'value'):
-                    max_tokens_lbl = ui.label('CSS').style('color: #000')
-                    max_tokens_lbl.set_text('Max Tokens: ')
-                    max_tokens_sld = ui.slider(min=0, max=4096, value=os.getenv('MAX_TOKENS',default=1024)).bind_value(app.storage.user, 'max_tokens')
-                    max_tokens_val_lbl = ui.label('CSS').style('color: #000')
-                    max_tokens_val_lbl.bind_text_from(app.storage.user, 'max_tokens')
-
-                with ui.row().classes('w-full no-wrap items-center').bind_visibility_from(v, 'value'):
-                    top_k_lbl = ui.label('CSS').style('color: #000') 
-                    top_k_lbl.set_text('Top k: ')
-                    top_k_sld = ui.slider(min=0, max=100, value=os.getenv('TOP_K',default=40)).bind_value(app.storage.user, 'top_k')
-                    top_k_val_lbl = ui.label('CSS').style('color: #000') 
-                    top_k_val_lbl.bind_text_from(app.storage.user, 'top_k')
-
-                with ui.row().classes('w-full no-wrap items-center').bind_visibility_from(v, 'value'):
-                    top_p_lbl = ui.label('CSS').style('color: #000') 
-                    top_p_lbl.set_text('Top p: ')
-                    top_p_sld = ui.slider(min=0, max=100, value=os.getenv('TOP_P',default=0.8)*100).bind_value(app.storage.user, 'top_p')
-                    top_p_val_lbl = ui.label('CSS').style('color: #000') 
-                    top_p_val_lbl.bind_text_from(app.storage.user, 'top_p',lambda x: x/100)
-
-                with ui.row().classes('w-full no-wrap items-center').bind_visibility_from(v, 'value'):
-                    repeat_penalty_lbl = ui.label('CSS').style('color: #000')
-                    repeat_penalty_lbl.set_text('Repeat penalty: ')
-                    repeat_penalty_sld = ui.slider(min=0, max=200, value=os.getenv('REPEAT_PENALTY',default=1.15)*100).bind_value(app.storage.user, 'repeat_penalty')
-                    repeat_penalty_val_lbl = ui.label('CSS').style('color: #000') 
-                    repeat_penalty_val_lbl.bind_text_from(app.storage.user, 'repeat_penalty',lambda x: x/100)
-                
-            
-                '''
-    
-
+             
 
     ui.run_with(
         fastapi_app,

@@ -19,5 +19,8 @@ class config:
     def set_config(self,section,key,value):
         if section in self.config:
             self.config[section][key] = value
-            return True
-        return False
+        else:
+            self.config[section] = {key:value}
+        self.store_config()
+        
+        

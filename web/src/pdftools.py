@@ -4,13 +4,13 @@ from rouge_score import rouge_scorer
 import os
 import ast
 class SimplePdfSummarizer():
-    def __init__(self,llm,pdf_proc,create_callback,update_callback,status_callback):
+    def __init__(self,llm,pdf_proc,create_callback,update_callback,status_callback,cfg):
         self.llm = llm
         self.create_callback = create_callback
         self.update_callback = update_callback
         self.status_callback = status_callback
         self.content_gen = pdf_proc.getNodesContents()
-        
+        self.cfg = cfg
         #Info needed to summarize multiple pages until token limit
         self.total_tokens = 0
         self.total_text = ""
@@ -46,7 +46,7 @@ class SimplePdfSummarizer():
 
         for text, name, source in self.content_gen:
             snippet_tokens = len(self.llm.tokenize(text.encode(encoding = 'UTF-8', errors = 'strict')))
-            if snippet_tokens + self.total_tokens > int(os.getenv('NUMBER_OF_TOKENS_PDF',default=3800)):
+            if snippet_tokens + self.total_tokens > int(os.getenv('NUMBER_OF_TOKENS_PDF',default=self.cfg.get_config('model','number_of_tokens_pdf',default=3800))):
                 if not self.summarizeSnippet(self.total_text,self.names,self.sources):
                     break
                 self.total_tokens = snippet_tokens
@@ -66,13 +66,13 @@ class SimplePdfSummarizer():
         return True
 
 class SimpleGraphExtractor():
-    def __init__(self,llm,pdf_proc,create_callback,update_callback,status_callback):
+    def __init__(self,llm,pdf_proc,create_callback,update_callback,status_callback,cfg):
         self.llm = llm
         self.create_callback = create_callback
         self.update_callback = update_callback
         self.status_callback = status_callback
         self.content_gen = pdf_proc.getNodesContents()
-        
+        self.cfg = cfg
         #Info needed to summarize multiple pages until token limit
         self.total_tokens = 0
         self.total_text = ""
@@ -117,7 +117,7 @@ class SimpleGraphExtractor():
 
         for text, name, source in self.content_gen:
             snippet_tokens = len(self.llm.tokenize(text.encode(encoding = 'UTF-8', errors = 'strict')))
-            if snippet_tokens + self.total_tokens > int(os.getenv('NUMBER_OF_TOKENS_PDF',default=3800)):
+            if snippet_tokens + self.total_tokens > int(os.getenv('NUMBER_OF_TOKENS_PDF',default=self.cfg.get_config('model','number_of_tokens_pdf',default=3800))):
                 if not self.extractGraph(self.total_text,self.names,self.sources):
                     break
                 self.total_tokens = snippet_tokens

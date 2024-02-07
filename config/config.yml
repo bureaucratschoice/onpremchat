@@ -1,9 +1,25 @@
-prompts:
-  chatprompt: Du bist ein hilfreicher Assistent.
+model:
+  chatprompt: "Du bist ein hilfreicher Assistent."
+  number_of_tokens_pdf: 3800
+  temperature: 0.7
+  max_tokens: 1024
+  top_k: 40
+  top_p: 0.9
+  repeat_penalty: 1.15
+  model_download_url: "https://huggingface.co/TheBloke/em_german_leo_mistral-GGUF/resolve/main/em_german_leo_mistral.Q5_K_S.gguf"
+  model_bin_path: "/models/em_german_leo_mistral.Q5_K_S.gguf"
+  number_of_tokens: 4096
+  verbose: True
+  gpu_layers: 0
 
 frontend:
-  assistent: "Assinstent:in"
-  you: Sie
-  chat-greeting:
-  pdf-greeting:
-  pdf-preprocessing:
+  assistant: "Assinstent:in"
+  you: "Sie"
+  chat-greeting: "Achtung, prüfen Sie jede Antwort bevor Sie diese in irgendeiner Form weiterverwenden. Je länger Ihre Frage ist bzw. je länger der bisherige Chatverlauf, desto länger brauche ich zum lesen. Es kann daher dauern, bis ich anfange Ihre Antwort zu schreiben. Die Länge der Warteschlange ist aktuell: "
+  pdf-greeting: "Laden Sie ein PDF hoch, damit ich Ihnen Fragen hierzu beantworten kann. Achtung, prüfen Sie jede Antwort bevor Sie diese in irgendeiner Form weiterverwenden. Die Länge der Warteschlange ist aktuell: "
+  pdf-preprocessing: "Ihr PDF wird gerade verarbeitet. Der aktuelle Status ist: "
+  app_title: "MWICHT"
+  to_chat: "Chat"
+  to_pdf: "PDF"
+
+
