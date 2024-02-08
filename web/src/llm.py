@@ -1,9 +1,11 @@
-from llama_cpp import Llama
+from llama_cpp import Llama, LlamaGrammar
 from dotenv import find_dotenv, load_dotenv
 import box
 import yaml
 import requests
 import os
+
+grammar = LlamaGrammar.from_file(list.gbnf)
 
 def download_file(url, filename):
     local_filename = filename
@@ -13,9 +15,6 @@ def download_file(url, filename):
             for chunk in r.iter_content(chunk_size=8192):  
                 f.write(chunk)
     return local_filename
-
-
-
 
 def build_llm(cfg):
     url= os.getenv('MODEL_DOWNLOAD_URL',default=cfg.get_config('model','model_download_url',default="https://huggingface.co/TheBloke/em_german_leo_mistral-GGUF/resolve/main/em_german_leo_mistral.Q5_K_S.gguf"))
@@ -30,3 +29,16 @@ def build_llm(cfg):
     llm = Llama(model_path=filename,n_ctx=ntokens, n_batch=128,verbose=verbose,n_gpu_layers=int(layers)) #verbose = False leads to error
     return llm
 
+
+class chainProzessor():
+    def __init__(self,llm,create_callback,update_callback,status_callback,cfg):
+        self.llm = llm
+        self.create_callback = create_callback
+        self.update_callback = update_callback
+        self.status_callback = status_callback
+        self.cfg = cfg
+        #Info needed to summarize multiple pages until token limit
+        self.total_tokens = 0
+        self.total_text = ""
+        self.names = []
+        self.sources = []

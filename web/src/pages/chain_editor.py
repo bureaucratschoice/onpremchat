@@ -22,9 +22,20 @@ def chain_editor(cfg,app):
     @ui.refreshable
     def chain() -> None:
         assign_uuid_if_missing(app)
-        print('in Chain')
+        
         i = 0
         while 'chain_elem'+str(i) in app.storage.user:
+            if not app.storage.user['chain_elem'+str(i)]:
+                j = i+1
+                while 'chain_elem'+str(j) in app.storage.user:
+                    if app.storage.user['chain_elem'+str(j)]:
+                        app.storage.user['chain_elem'+str(i)] = app.storage.user['chain_elem'+str(j)]
+                        app.storage.user['chain_elem'+str(j)] = ""
+                        break
+                    j = j+1
+            i += 1
+        i = 0
+        while 'chain_elem'+str(i) in app.storage.user and app.storage.user['chain_elem'+str(i)] and len(app.storage.user['chain_elem'+str(i)]) > 0:
             with ui.row().classes('w-full no-wrap items-center'):
                 text = ui.textarea(placeholder=placeholder).props('rounded outlined input-class=mx-3').props('clearable') \
                 .classes('w-full self-center').bind_value(app.storage.user, 'chain_elem'+str(i)).on('keydown.enter', append)
@@ -35,15 +46,16 @@ def chain_editor(cfg,app):
 
     def append() -> None:
         assign_uuid_if_missing(app)
-        print('in Append')
+        #print('in Append')
         '''
         chain_elem = app.storage.user['chain_elem']
         if 'chain' in app.storage.user:
             app.storage.user['chain'].append(chain_elem)
         else:
             app.storage.user['chain'] = [chain_elem]
-        chain.refresh()
+        
         '''
+        chain.refresh()
     anchor_style = r'a:link, a:visited {color: inherit !important; text-decoration: none; font-weight: 500}'
     ui.add_head_html(f'<style>{anchor_style}</style>')
     title = os.getenv('APP_TITLE',default=cfg.get_config('frontend','app_title',default="MWICHT"))
