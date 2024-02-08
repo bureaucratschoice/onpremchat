@@ -237,6 +237,8 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
                 for chain_elem in app.storage.user['chain']:
                     print(chain_elem)
                     ui.chat_message(text=chain_elem, name="Sie",sent = True)
+            if context.get_client().has_socket_connection:
+                ui.run_javascript('window.scrollTo(0, document.body.scrollHeight)')
                         
         def append() -> None:
             assign_uuid_if_missing(app)
@@ -262,7 +264,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
                     text = ui.textarea(placeholder=placeholder).props('rounded outlined input-class=mx-3').props('clearable') \
                     .classes('w-full self-center').bind_value(app.storage.user, 'chain_elem').on('keydown.enter', append)
                 send_btn = ui.button(icon="send", on_click=lambda: append())
-                
+
     @ui.page('/pdf')
     def pdfpage():
 
