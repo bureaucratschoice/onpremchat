@@ -8,7 +8,7 @@ def chain_editor(cfg,app):
         
         @ui.refreshable
         def chain() -> None:
-            assign_uuid_if_missing()
+            assign_uuid_if_missing(app)
             i = 0
             while 'chain'+str(i) in app.storage.user:
                 text = ui.textarea(placeholder=placeholder).props('rounded outlined input-class=mx-3').props('clearable') \
@@ -21,7 +21,7 @@ def chain_editor(cfg,app):
             send_btn = ui.button(icon="send", on_click=lambda: append())
             
         def append() -> None:
-            assign_uuid_if_missing()
+            assign_uuid_if_missing(app)
             chain.refresh()
 
         anchor_style = r'a:link, a:visited {color: inherit !important; text-decoration: none; font-weight: 500}'
