@@ -1,4 +1,4 @@
-
+from uuid import uuid4
 
 def assign_uuid_if_missing(app):
     if not 'chat_job' in app.storage.user or not app.storage.user['chat_job']:
