@@ -11,9 +11,9 @@ def chain_editor(cfg,app):
             assign_uuid_if_missing(app)
             if 'chain' in app.storage.user:
           
-            for chain_elem in app.storage.user['chain']:
-                print(chain_elem)
-                ui.chat_message(text=chain_elem, name="Sie",sent = True)
+                for chain_elem in app.storage.user['chain']:
+                    print(chain_elem)
+                    ui.chat_message(text=chain_elem, name="Sie",sent = True)
                         
         def append() -> None:
             assign_uuid_if_missing(app)
