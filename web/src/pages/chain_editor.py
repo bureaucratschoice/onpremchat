@@ -32,6 +32,8 @@ def chain_editor(cfg,app):
         # the queries below are used to expand the contend down to the footer (content can then use flex-grow to expand)
         ui.query('.q-page').classes('flex')
         ui.query('.nicegui-content').classes('w-full')
-        append()
+        text = ui.textarea(placeholder=placeholder).props('rounded outlined input-class=mx-3').props('clearable') \
+                .classes('w-full self-center').bind_value(app.storage.user, 'chain'+str(0)).on('keydown.enter', append)
+        
 
            
