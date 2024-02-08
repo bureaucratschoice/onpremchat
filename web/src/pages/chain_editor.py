@@ -5,17 +5,18 @@ from pages.common_tools import assign_uuid_if_missing
 import os
 
 def chain_editor(cfg,app):
-        
+        placeholder = 'prompt' 
         @ui.refreshable
         def chain() -> None:
             assign_uuid_if_missing(app)
             i = 0
+           
             while 'chain'+str(i) in app.storage.user:
                 text = ui.textarea(placeholder=placeholder).props('rounded outlined input-class=mx-3').props('clearable') \
                 .classes('w-full self-center').bind_value(app.storage.user, 'chain'+str(i)).on('keydown.enter', append)
                 send_btn = ui.button(icon="send", on_click=lambda: append())
                 i += 1
-            placeholder = 'prompt' 
+            
             text = ui.textarea(placeholder=placeholder).props('rounded outlined input-class=mx-3').props('clearable') \
                 .classes('w-full self-center').bind_value(app.storage.user, 'chain'+str(i)).on('keydown.enter', append)
             send_btn = ui.button(icon="send", on_click=lambda: append())
