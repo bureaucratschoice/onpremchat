@@ -10,17 +10,12 @@ def chain_editor(cfg,app):
         def chain() -> None:
             assign_uuid_if_missing(app)
             i = 0
-            with ui.column().classes('w-full max-w-3xl mx-auto my-6'):
-                while 'chain'+str(i) in app.storage.user:
-                    with ui.row().classes('w-full no-wrap items-center'):
-                        ui.textarea(placeholder=placeholder).props('rounded outlined input-class=mx-3').props('clearable') \
-                        .classes('w-full self-center').bind_value(app.storage.user, 'chain'+str(i)).on('keydown.enter', append)
-                        ui.button(icon="send", on_click=lambda: append())
-                        i += 1
-            with ui.row().classes('w-full no-wrap items-center'):
-                ui.textarea(placeholder=placeholder).props('rounded outlined input-class=mx-3').props('clearable') \
-                    .classes('w-full self-center').bind_value(app.storage.user, 'chain'+str(i)).on('keydown.enter', append)
-                ui.button(icon="send", on_click=lambda: append())
+                        
+            while 'chain'+str(i) in app.storage.user:
+                ui.chat_message(text=app.storage.user['chain'+str(i)], name="Sie")
+                    
+                i += 1
+          
             
         def append() -> None:
             assign_uuid_if_missing(app)
@@ -34,8 +29,12 @@ def chain_editor(cfg,app):
         # the queries below are used to expand the contend down to the footer (content can then use flex-grow to expand)
         ui.query('.q-page').classes('flex')
         ui.query('.nicegui-content').classes('w-full')
-        text = ui.textarea(placeholder=placeholder).props('rounded outlined input-class=mx-3').props('clearable') \
-                .classes('w-full self-center').bind_value(app.storage.user, 'chain'+str(0)).on('keydown.enter', append)
-        send_btn = ui.button(icon="send", on_click=lambda: append())
+
+        with ui.footer().classes('bg-white'):
+            with ui.column().classes('w-full max-w-3xl mx-auto my-6'):
+                with ui.row().classes('w-full no-wrap items-center').bind_visibility_from(pdf_ready,'ready'):
+                    text = ui.textarea(placeholder=placeholder).props('rounded outlined input-class=mx-3').props('clearable') \
+                    .classes('w-full self-center').bind_value(app.storage.user, 'chain'+str(0)).on('keydown.enter', append)
+                send_btn = ui.button(icon="send", on_click=lambda: append())
 
            
