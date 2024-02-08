@@ -43,10 +43,10 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
         messages: List[Tuple[str, str]] = [] 
         thinking: bool = False
         timer = ui.timer(1.0, lambda: chat_messages.refresh())
-        assign_uuid_if_missing()
+        assign_uuid_if_missing(app)
         @ui.refreshable
         def chat_messages() -> None:
-            assign_uuid_if_missing()
+            assign_uuid_if_missing(app)
             messages: List[Tuple[str, str]] = [] 
             messages.append((assi, greeting + str(jobStat.countQueuedJobs())))
             answers = []
@@ -112,7 +112,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
                 i_a += 1
 
         def delete_chat() -> None:
-            assign_uuid_if_missing()
+            assign_uuid_if_missing(app)
             jobStat.removeJob(app.storage.browser['id'],app.storage.user['chat_job'])
             app.storage.user['text'] = ""
             app.storage.user['chat_job'] = uuid4()
@@ -131,7 +131,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
             app.storage.user['repeat_penalty'] = os.getenv('REPEAT_PENALTY',default=cfg.get_config('model','repeat_penalty',default=1.15))*100
 
         async def send() -> None:
-            assign_uuid_if_missing()
+            assign_uuid_if_missing(app)
             message = app.storage.user['text']
             custom_config = {'temperature':app.storage.user['temperature']/100,'max_tokens':app.storage.user['max_tokens'],'top_k':app.storage.user['top_k'],'top_p':app.storage.user['top_p']/100,'repeat_penalty':app.storage.user['repeat_penalty']/100}
             text.value = ''
@@ -228,7 +228,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
 
     @ui.page('/editor')
     def editor():
-        chain_editor()
+        chain_editor(cfg,app)
     @ui.page('/pdf')
     def pdfpage():
 
@@ -236,10 +236,10 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
         pdfmessages: List[Tuple[str, str]] = [] 
         thinking: bool = False
         timer = ui.timer(1.0, lambda: pdf_messages.refresh())
-        assign_uuid_if_missing()
+        assign_uuid_if_missing(app)
         @ui.refreshable
         def pdf_messages() -> None:
-            assign_uuid_if_missing()
+            assign_uuid_if_missing(app)
             pdfmessages: List[Tuple[str, str]] = [] 
             pdfmessages.append((assi, pdf_greeting + str(jobStat.countQueuedJobs())))
             answers = []
@@ -319,7 +319,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
                 ui.run_javascript('window.scrollTo(0, document.body.scrollHeight)')
 
         def delete_chat() -> None:
-            assign_uuid_if_missing()
+            assign_uuid_if_missing(app)
             jobStat.removeJob(app.storage.browser['id'],app.storage.user['pdf_job'])
             app.storage.user['pdf_question'] = ""
             app.storage.user['pdf_job'] = uuid4()
@@ -334,7 +334,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
                 ui.run_javascript('navigator.clipboard.writeText(`' + text + '`)', timeout=5.0)
 
         async def send() -> None:
-            assign_uuid_if_missing()
+            assign_uuid_if_missing(app)
             message = app.storage.user['pdf_question']
             #custom_config = {'temperature':app.storage.user['temperature']/100,'max_tokens':app.storage.user['max_tokens'],'top_k':app.storage.user['top_k'],'top_p':app.storage.user['top_p']/100,'repeat_penalty':app.storage.user['repeat_penalty']/100}
             text.value = ''
@@ -351,7 +351,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
             pdf_messages.refresh()
 
         def summarize_pdf() -> None:
-            assign_uuid_if_missing()
+            assign_uuid_if_missing(app)
             jobStat.addJob(app.storage.browser['id'],app.storage.user['pdf_job'],"",job_type = 'pdf_summarize' )
             job = {'token':app.storage.browser['id'],'uuid':app.storage.user['pdf_job']}
             try:
@@ -364,7 +364,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
             pdf_messages.refresh()
 
         def handle_upload(event: events.UploadEventArguments):
-            assign_uuid_if_missing()
+            assign_uuid_if_missing(app)
             fileid = app.storage.browser['id']
             with event.content as f:
                 

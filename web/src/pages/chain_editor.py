@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 from typing import List, Tuple
 from nicegui import app,context, ui, events
-from common_tools import assign_uuid_if_missing
+from pages.common_tools import assign_uuid_if_missing
+import os
 
-def chain_editor():
-
+def chain_editor(cfg,app):
+        
         @ui.refreshable
         def chain() -> None:
             assign_uuid_if_missing()
@@ -31,5 +32,6 @@ def chain_editor():
         # the queries below are used to expand the contend down to the footer (content can then use flex-grow to expand)
         ui.query('.q-page').classes('flex')
         ui.query('.nicegui-content').classes('w-full')
+        append()
 
            
