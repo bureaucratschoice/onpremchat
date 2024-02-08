@@ -32,7 +32,7 @@ def chain_editor(cfg,app):
 
         with ui.footer().classes('bg-white'):
             with ui.column().classes('w-full max-w-3xl mx-auto my-6'):
-                with ui.row().classes('w-full no-wrap items-center').bind_visibility_from(pdf_ready,'ready'):
+                with ui.row().classes('w-full no-wrap items-center'):
                     text = ui.textarea(placeholder=placeholder).props('rounded outlined input-class=mx-3').props('clearable') \
                     .classes('w-full self-center').bind_value(app.storage.user, 'chain'+str(0)).on('keydown.enter', append)
                 send_btn = ui.button(icon="send", on_click=lambda: append())
