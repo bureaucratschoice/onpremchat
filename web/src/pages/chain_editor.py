@@ -35,6 +35,6 @@ def chain_editor(cfg,app):
         ui.query('.nicegui-content').classes('w-full')
         text = ui.textarea(placeholder=placeholder).props('rounded outlined input-class=mx-3').props('clearable') \
                 .classes('w-full self-center').bind_value(app.storage.user, 'chain'+str(0)).on('keydown.enter', append)
-        
+        send_btn = ui.button(icon="send", on_click=lambda: append())
 
            
