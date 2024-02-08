@@ -10,8 +10,9 @@ def chain_editor(cfg,app):
         def chain() -> None:
             assign_uuid_if_missing(app)
             i = 0
-                        
+            print(app.storage.user)            
             while 'chain'+str(i) in app.storage.user:
+                print(app.storage.user['chain'+str(i)])
                 ui.chat_message(text=app.storage.user['chain'+str(i)], name="Sie")
                     
                 i += 1
