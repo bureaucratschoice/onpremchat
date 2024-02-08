@@ -8,6 +8,7 @@ import os
 import time
 from uuid import uuid4
 from pages.common_tools import assign_uuid_if_missing
+from pageg.chain_editor import chain_editor
 
 class InputText:
     def __init__(self):
@@ -225,7 +226,9 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
         topdf = os.getenv('TOPDF',default=cfg.get_config('frontend','to_pdf',default="Zu den PDF-Werkzeugen"))
         ui.button(topdf, on_click=lambda: ui.open(pdfpage, new_tab=False))
 
-
+    @ui.page('/editor')
+    def editor():
+        chain_editor()
     @ui.page('/pdf')
     def pdfpage():
 
