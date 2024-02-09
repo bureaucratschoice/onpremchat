@@ -31,6 +31,9 @@ def chain_editor(cfg,app):
                     if app.storage.user['chain_elem'+str(j)]:
                         app.storage.user['chain_elem'+str(i)] = app.storage.user['chain_elem'+str(j)]
                         app.storage.user['chain_elem'+str(j)] = ""
+                        if 'chain_action'+str(j) in app.storage.user and app.storage.user['chain_action'+str(j)]:
+                            app.storage.user['chain_action'+str(i)] = app.storage.user['chain_action'+str(j)]
+                            app.storage.user['chain_action'+str(j)] = ""
                         break
                     j = j+1
             i += 1
@@ -39,10 +42,12 @@ def chain_editor(cfg,app):
             with ui.row().classes('w-full no-wrap items-center'):
                 text = ui.textarea(placeholder=placeholder).props('rounded outlined input-class=mx-3').props('clearable') \
                 .classes('w-full self-center').bind_value(app.storage.user, 'chain_elem'+str(i)).on('keydown.enter', append)
+                ui.radio({1: 'Map', 2: 'Reduce', 3: 'Expand'}).props('inline').bind_value(app.storage.user, 'chain_action'+str(i))
             i += 1
         with ui.row().classes('w-full no-wrap items-center'):
             text = ui.textarea(placeholder=placeholder).props('rounded outlined input-class=mx-3').props('clearable') \
             .classes('w-full self-center').bind_value(app.storage.user, 'chain_elem'+str(i)).on('keydown.enter', append)
+            ui.radio({1: 'Map', 2: 'Reduce', 3: 'Expand'}).props('inline').bind_value(app.storage.user, 'chain_action'+str(i))
 
     def append() -> None:
         assign_uuid_if_missing(app)

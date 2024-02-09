@@ -5,7 +5,7 @@ import yaml
 import requests
 import os
 
-grammar = LlamaGrammar.from_file(list.gbnf)
+grammar = LlamaGrammar.from_file("list.gbnf")
 
 def download_file(url, filename):
     local_filename = filename

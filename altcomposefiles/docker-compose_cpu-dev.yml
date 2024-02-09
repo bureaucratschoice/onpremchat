@@ -9,6 +9,7 @@ services:
     volumes:
       - ../models:/models
       - ../config:/config
+      - ../web/src:/app
     ports:
       - 8000:80
   watchtower:
