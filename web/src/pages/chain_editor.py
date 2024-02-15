@@ -6,9 +6,9 @@ from helpers.random_words import get_random_word_string
 
 import os
 
-def chain_editor(cfg,app):
+def chain_editor(cfg,app,jobStat,taskQueue):
     placeholder = 'prompt' 
-
+    action_mapping = {1: 'Map', 2: 'Reduce', 3: 'Expand'}
 
     @ui.refreshable
     def chain() -> None:
@@ -32,7 +32,7 @@ def chain_editor(cfg,app):
                             app.storage.user['chain_action'+str(j)] = ""
                         if 'chain_files'+str(j) in app.storage.user and app.storage.user['chain_files'+str(j)]:
                             app.storage.user['chain_files'+str(i)] = app.storage.user['chain_files'+str(j)]
-                            app.storage.user['chain_files'+str(j)] = ""
+                            app.storage.user['chain_files'+str(j)] = []
                         break
                     j = j+1
             i += 1
@@ -41,13 +41,13 @@ def chain_editor(cfg,app):
             with ui.row().classes('w-full no-wrap items-center'):
                 text = ui.textarea(placeholder=placeholder).props('rounded outlined input-class=mx-3').props('clearable') \
                 .classes('w-full self-center').bind_value(app.storage.user, 'chain_prompt'+str(i)).on('keydown.enter', append)
-                ui.radio({1: 'Map', 2: 'Reduce', 3: 'Expand'}).props('inline').bind_value(app.storage.user, 'chain_action'+str(i))
+                ui.radio(action_mapping).props('inline').bind_value(app.storage.user, 'chain_action'+str(i))
                 ui.select(filenames, multiple=True, value="", label='Aus Dateien').classes('w-64').props('use-chips').bind_value(app.storage.user, 'chain_files'+str(i))
             i += 1
         with ui.row().classes('w-full no-wrap items-center'):
             text = ui.textarea(placeholder=placeholder).props('rounded outlined input-class=mx-3').props('clearable') \
             .classes('w-full self-center').bind_value(app.storage.user, 'chain_prompt'+str(i)).on('keydown.enter', append)
-            ui.radio({1: 'Map', 2: 'Reduce', 3: 'Expand'}).props('inline').bind_value(app.storage.user, 'chain_action'+str(i))
+            ui.radio(action_mapping).props('inline').bind_value(app.storage.user, 'chain_action'+str(i))
             ui.select(filenames, multiple=True, value="", label='Aus Dateien').classes('w-64').props('use-chips').bind_value(app.storage.user, 'chain_files'+str(i))
         with ui.row().classes('w-full no-wrap items-center'):
             compile_btn = ui.button(icon="not_started", on_click=lambda: compile())
@@ -56,10 +56,19 @@ def chain_editor(cfg,app):
         i = 0
         chain = []
         while 'chain_prompt'+str(i) in app.storage.user and app.storage.user['chain_prompt'+str(i)]:
-            chain_elem = {'prompt':app.storage.user['chain_prompt'+str(i)],'action':app.storage.user['chain_action'+str(i)] if 'chain_action'+str(i) in app.storage.user else None,'files':app.storage.user['chain_files'+str(i)] if 'chain_files'+str(i) in app.storage.user else None}
+            chain_elem = {'prompt':app.storage.user['chain_prompt'+str(i)],'action':app.storage.user['chain_action'+str(i)] if 'chain_action'+str(i) in app.storage.user else 0,'files':app.storage.user['chain_files'+str(i)] if 'chain_files'+str(i) in app.storage.user else []}
             chain.append(chain_elem)
             i += 1
+        meta_chain = {'chain_id':app.storage.user['chain_id'],'file_id':app.storage.browser['id'],'chain':chain}
         print(chain)
+        jobStat.addJob(app.storage.browser['id'],app.storage.user['chain_job'],'compile_chain',job_type = 'compile_chain' )
+        job = {'token':app.storage.browser['id'],'uuid':app.storage.user['chain_job'],'meta_chain':meta_chain}
+        try:
+            taskQueue.put(job)
+                
+        except:
+            jobStat.updateStatus(app.storage.browser['id'],app.storage.user['chain_job'],"failed") 
+        
     def append() -> None:
         assign_uuid_if_missing(app)
         chain.refresh()
@@ -91,7 +100,7 @@ def chain_editor(cfg,app):
     ui.query('.nicegui-content').classes('w-full')
     with ui.column().classes('w-full max-w-3xl mx-auto my-6'):
         #with ui.row().classes('w-full no-wrap items-center'):
-        ui.input(label='Chain_ID',validation={'Input too long': lambda value: len(value) < 40}).bind_value(app.storage.user, 'chain_id')
+        ui.input(label='Chain_ID',validation={'Input too long': lambda value: len(value) < 100}).bind_value(app.storage.user, 'chain_id').classes('w-full')
         ui.upload(on_upload=handle_upload,multiple=True,label='Upload Files',max_total_size=9048576,on_rejected=lambda: ui.notify('Rejected!')).props('accept=".pdf,.docx,.msg"').classes('max-w-full')
         chain()
     

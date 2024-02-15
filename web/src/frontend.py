@@ -228,7 +228,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
 
     @ui.page('/editor')
     def editor():
-        chain_editor(cfg,app)
+        chain_editor(cfg,app,jobStat,taskQueue)
 
     @ui.page('/pdf')
     def pdfpage():

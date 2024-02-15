@@ -12,12 +12,12 @@ services:
       - ../web/src:/app
     ports:
       - 8000:80
-  watchtower:
-    image: containrrr/watchtower
-    restart: unless-stopped
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    command: --interval 600
+  #watchtower:
+  #  image: containrrr/watchtower
+  #  restart: unless-stopped
+  #  volumes:
+  #    - /var/run/docker.sock:/var/run/docker.sock
+  #  command: --interval 600
 
 
 
