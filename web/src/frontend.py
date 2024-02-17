@@ -22,6 +22,11 @@ class PDFReady:
         self.answered = False
         self.ready_to_upload = True
 
+class ChainReady:
+    def __init__(self):
+        self.ready = False
+        self.answered = False
+        self.ready_to_upload = True
 #def assign_uuid_if_missing():
 #    if not 'chat_job' in app.storage.user or not app.storage.user['chat_job']:
 #        app.storage.user['chat_job'] = uuid4()
@@ -35,6 +40,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
     pdf_greeting = os.getenv('PDFGREETING',default=cfg.get_config('frontend','pdf-greeting',default="Laden Sie ein PDF hoch, damit ich Ihnen Fragen hierzu beantworten kann. Achtung, prüfen Sie jede Antwort bevor Sie diese in irgendeiner Form weiterverwenden. Die Länge der Warteschlange ist aktuell: "))
     pdf_processed = os.getenv('PDFPROC',default=cfg.get_config('frontend','pdf-preprocessing',default="Ihr PDF wird gerade verarbeitet. Der aktuelle Status ist: "))
     pdf_ready = PDFReady()
+    #chain_ready = ChainReady()
     
     @ui.page('/chat')
     

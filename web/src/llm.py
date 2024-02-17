@@ -5,6 +5,7 @@ import yaml
 import requests
 import os
 from pdfrag import PDF_Processor
+import pdftools
 from llama_index.llms import LlamaCPP # FOR PDF
 
 grammar = LlamaGrammar.from_file("list.gbnf")
@@ -76,61 +77,116 @@ class chainProzessor():
                 for file in item['files']:
                     filepath = f'/tmp/{self.file_id}/{file}'
                     proc.processPDF(filepath,remove_orig=False)
-                #prompt = item['prompt']
-                #pdf_action_prompt = f"Sie kategoriesieren Texte nach dem jeweils enthaltenen Arbeitsauftrag. Bitte bestimmen Sie auf Basis des folgenden Arbeitsauftrags, welche der Aktionen 'Zusammenfassen','Frage Beantworten','Sonstige' gewünscht ist. '''{prompt}''' Geben Sie genau eine Aktion als Liste also entweder ['Zusammenfassen'], ['Frage Beantworten'] oder ['Sonstiges'] aus. ASSISTANT: Aktion:"
-                #pdf_action = self.llm(prompt, temperature = 0.7, max_tokens = 128, top_k=20, top_p=0.9,repeat_penalty=1.15, grammar= grammar)['choices'][0]['text']
-                #print(pdf_action)
+                prompt = item['prompt']
+                print(item['prompt'])
+                pdf_action_prompt = f"Du bist ein hilfreicher Assistent. Der folgende TEXT enthält in dreifachen Anführungszeichen (''') einen Arbeitsauftrag in Bezug auf ein Dokument. Arbeitsaufträge können sein:\nZusammenfassen\nFrage beantworten\n\n. Bitte geben Sie nur den enthaltenen Arbeitsauftrag aus. Hier einige Beispiele:\nBei 'Bitte fassen Sie das Dokument zusammen.' wäre der Arbeitsauftrag 'Zusammenfassen'.\nBei 'Bitte beantworten Sie die folgende Frage.' wäre der Arbeitsauftrag 'Frage beantworten'.\nWenn ein Fragewort ('Wer','Was','Wie','Wo','Warum',...) enthalten ist, ist der Arbeitsauftrag eher 'Frage beantworten'. Wenn aber eine Frage an das ganze Dokument gestellt wird, dann ist der Arbeitsauftrag eher 'Zusammenfassen'. TEXT:'''{prompt}''' ASSISTANT: Arbeitsauftrag:"
+                pdf_action = self.llm(pdf_action_prompt, temperature = 0.7, max_tokens = 128, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text']
+                if 'Zusammenfassen' in pdf_action:
+                    chain_elem['pdf_action'] = 'Zusammenfassen'
+                else:
+                    chain_elem['pdf_action'] = 'Frage beantworten'
+                print(pdf_action)
                 
                 chain_elem['pdf_proc'] = proc
             chain_elem['instruction'] = item['prompt']
             chain_elem['action'] = item['action']
             self.chain.append(chain_elem)
-        self.run()
-    def run(self,initialprompt = ""):
+        #self.run()
+
+    def seperate_into_list(self,text):
+        if '\n\n':
+            text = text.split("\n\n")
+            text = [i for i in text if i]
+        else:
+            if '\n' in text:    
+                text = text.split("\n")
+                text = [i for i in text if i]
+            else:
+                if ',' in text:
+                    text = text.split(",")
+                    text = [i for i in text if i]
+        return text
+
+    def run(self,create_callback,update_callback,status_callback,last_answer_callback,initialprompt = ""):
+        #TODO: Nach jedem Schritt der chain zurück, für ggf. andere Aufträge. Handling von PDF-Zusammenfassung in diesem Zusammenhang gesondert.
         i = 0
         output = []
+        last_content = ""
         while i < len(self.chain):
+            create_callback(str(output))
             chain_elem = self.chain[i]
             print("CHAINSTEP " + str(i))
             if i == 0:
                 if initialprompt:
-                    prompt = f"Eingabe:{initialprompt}. Auftrag: {chain_elem['instruction']}."
+                    prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}. EINGABE:{initialprompt}. "
                 else:
-                    prompt = chain_elem['instruction']
+                    prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}"
+
+                if 'pdf_action' in chain_elem and 'pdf_proc' in chain_elem:
+                    pdf_proc = chain_elem['pdf_proc']
+                    if chain_elem['pdf_action'] == 'Zusammenfassen':
+                        summarizer = pdftools.SimplePdfSummarizer(llm,pdf_proc,create_callback,update_callback,status_callback,cfg)
+                        output = summarizer.run(False)
+                    else:
+                        output = pdf_proc.askPDF(chain_elem['instruction'])
+                else:
+                    output = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()
+
                 if chain_elem['action'] == 3:
-                    output = self.llm(prompt, temperature = 0.7, max_tokens = 1024, top_k=20, top_p=0.9,repeat_penalty=1.15, grammar= grammar)['choices'][0]['text']    
-                    output = output.split("- ")
-                else:
-                    output = self.llm(prompt, temperature = 0.7, max_tokens = 1024, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text']    
-                print(output)
+                    output = self.seperate_into_list(output)
+                    
+                    
+               
+                print("PROMPT: " + str(prompt))
+                print("OUTPUT: " + str(output))
             else:
                 newoutput = []
                 if isinstance(output, list):
                     if chain_elem['action'] == 1 or chain_elem['action'] == 3  : #map each elem to prompt, no support for further expasion yet
-                        for item in output[:10]:
-                            print("Elementwise Mapping with " + str(item))
-                            prompt = f"Eingabe:{item}. Auftrag: {chain_elem['instruction']}."
-                            newoutput.append(self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'])
+                        print("Elementwise Mapping")
+                        for item in output:
+                            if item:
+                                item = str(item).strip()
+                                prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}. EINGABE:{item}. "
+                                print("PROMPT: " + str(prompt))
+                                newresult = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()
+                                print("OUTPUT: " + str(newresult))
+                                newoutput.append(newresult)
                     if chain_elem['action'] == 2: #reduce list to one
                         
                         fulltext = ""
                         for item in output:
                             fulltext += item + "\n" 
-                        print("Reduce List with " + str(fulltext))
-                        prompt = f"Eingabe:{fulltext}. Auftrag: {chain_elem['instruction']}."
-                        newoutput = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text']
+                        fulltext = fulltext.strip()
+                        print("Reduce List")
+                        prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}. EINGABE:{output}. "
+                        print("PROMPT: " + str(prompt))
+                        newoutput = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()
+                        print("OUTPUT: " + str(newoutput))
 
                 else:
                     if chain_elem['action'] == 1 or chain_elem['action'] == 2: #reduce is like map without list
-                        print("Reduce or map without list " +str(output))
-                        prompt = f"Eingabe:{output}. Auftrag: {chain_elem['instruction']}."
-                        newoutput = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text']
+                        print("Reduce or map without list ")
+                        f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}. EINGABE:{output}. "
+                        print("PROMPT: " + str(prompt))
+                        newoutput = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()
+                        print("OUTPUT: " + str(newoutput))
                     else: #expand
-                        print("Expand without list " +str(expand))
-                        prompt = f"Eingabe:{output}. Auftrag: {chain_elem['instruction']}."
-                        newoutput = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15, grammar= grammar)['choices'][0]['text']    
-                        newoutput = newoutput.split("- ")
+                        print("Expand without list ")
+                        prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}. EINGABE:{output}. "
+                        print("PROMPT: " + str(prompt))
+                        newoutput = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()    
+                        print("OUTPUT: " + str(newoutput))
+                        if '\n' in newoutput:   
+                            newoutput = newoutput.split("\n")
+                            newoutput = [i for i in newoutput if i]    
+                  
                 output = newoutput
-
             i += 1
+            
+            
+            update_callback(str(output))
+            
+
         print(output)
+        status_callback("finished")

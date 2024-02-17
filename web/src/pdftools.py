@@ -38,22 +38,23 @@ class SimplePdfSummarizer():
         rouge1 = scores['rouge1'].fmeasure
 
         self.update_callback(response+" (Vgl. "+str(names)+":"+str(sources[0]+"-"+sources[-1])+") (Score: "+str(round(rouge1,2))+")")
-        return True
+        return response
 
-
-    def run(self):
+    def run(self,self_interupt = True):
         #set_break = False
 
         for text, name, source in self.content_gen:
             snippet_tokens = len(self.llm.tokenize(text.encode(encoding = 'UTF-8', errors = 'strict')))
             if snippet_tokens + self.total_tokens > int(os.getenv('NUMBER_OF_TOKENS_PDF',default=self.cfg.get_config('model','number_of_tokens_pdf',default=3800))):
-                if not self.summarizeSnippet(self.total_text,self.names,self.sources):
+                response = self.summarizeSnippet(self.total_text,self.names,self.sources):
+                if not response
                     break
                 self.total_tokens = snippet_tokens
                 self.total_text = text
                 self.names = [name]
                 self.sources = [source]
-                return False                                
+                if self_interupt:
+                    return False                                
             else:
                 self.total_tokens += snippet_tokens
                 self.total_text += "\n" + text

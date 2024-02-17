@@ -6,10 +6,12 @@ from helpers.random_words import get_random_word_string
 
 import os
 
+
 def chain_editor(cfg,app,jobStat,taskQueue):
     placeholder = 'prompt' 
     action_mapping = {1: 'Map', 2: 'Reduce', 3: 'Expand'}
-
+    timer = ui.timer(1.0, lambda: chain_messages.refresh())
+    
     @ui.refreshable
     def chain() -> None:
         assign_uuid_if_missing(app)
@@ -52,6 +54,66 @@ def chain_editor(cfg,app,jobStat,taskQueue):
         with ui.row().classes('w-full no-wrap items-center'):
             compile_btn = ui.button(icon="not_started", on_click=lambda: compile())
 
+    chainmessages: List[Tuple[str, str]] = [] 
+    thinking: bool = False
+    
+    assign_uuid_if_missing(app)
+    
+    @ui.refreshable
+    def chain_messages() -> None:
+        assign_uuid_if_missing(app)
+        chainmessages: List[Tuple[str, str]] = [] 
+        chainmessages.append(("assi",str(jobStat.countQueuedJobs())))
+        answers = []
+        questions = []
+        status = jobStat.getJobStatus(app.storage.browser['id'],app.storage.user['chain_job'])
+            
+        if 'job_type' in status and status['job_type'] == 'compile_chain':
+            if 'answer' in status:
+                answers = status['answer']
+        i_q = 0
+        i_a = 0
+        output_fin = False
+        while not output_fin:
+            if i_q < len(questions):
+                if questions[i_q]:
+                    chainmessages.append((you,questions[i_q]))
+                    i_q += 1
+                else:
+                    i_q += 1
+                    continue
+            if i_a < len(answers):
+                if answers[i_a]:
+                    chainmessages.append(("assi",answers[i_a]))
+                    i_a += 1
+                else:
+                    i_a += 1
+                    continue
+            if i_q >= len(questions) and i_a >= len(answers):
+                output_fin = True
+            
+        for name, text in chainmessages:
+            ui.chat_message(text=text, name=name, sent=name == "assi")
+            
+        if 'status' in status:
+            if status['status'] == 'processing':
+                thinking = True
+                timer.activate()
+                
+            else:
+                thinking = False
+                timer.activate()
+            if status['status'] == 'finished':
+                timer.deactivate()
+            
+        else:
+            thinking = False
+            timer.activate()
+        if thinking:
+            ui.spinner(size='3rem').classes('self-center')
+        #if context.get_client().has_socket_connection:
+        #    ui.run_javascript('window.scrollTo(0, document.body.scrollHeight)')
+
     def compile()-> None:
         i = 0
         chain = []
@@ -68,6 +130,7 @@ def chain_editor(cfg,app,jobStat,taskQueue):
                 
         except:
             jobStat.updateStatus(app.storage.browser['id'],app.storage.user['chain_job'],"failed") 
+        timer.activate()
         
     def append() -> None:
         assign_uuid_if_missing(app)
@@ -103,4 +166,5 @@ def chain_editor(cfg,app,jobStat,taskQueue):
         ui.input(label='Chain_ID',validation={'Input too long': lambda value: len(value) < 100}).bind_value(app.storage.user, 'chain_id').classes('w-full')
         ui.upload(on_upload=handle_upload,multiple=True,label='Upload Files',max_total_size=9048576,on_rejected=lambda: ui.notify('Rejected!')).props('accept=".pdf,.docx,.msg"').classes('max-w-full')
         chain()
+        chain_messages()
     

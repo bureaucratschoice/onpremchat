@@ -117,6 +117,19 @@ class jobStatus():
         except:
             return False
 
+    def getLastAnswer(self,token,uuid):
+        try:
+            if token in self.jobsByToken:
+                if uuid in self.jobsByToken[token]:
+                    if 'answer' in self.jobsByToken[token][uuid]:
+                        answer = self.jobsByToken[token][uuid]['answer']
+                        if isinstance(answer, list):
+                            return answer[-1]
+                        else:
+                            return answer
+        except:
+            return False
+
     def updateAnswer(self,token,uuid,answer):
         try:
             if token in self.jobsByToken:
