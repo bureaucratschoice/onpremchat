@@ -32,6 +32,24 @@ def build_llm(cfg):
     llm = Llama(model_path=filename,n_ctx=ntokens, n_batch=128,verbose=verbose,n_gpu_layers=int(layers)) #verbose = False leads to error
     return llm
 
+class summarizerOutput():
+    def __init__(self):
+        self.content = []
+
+    def add(self,content):
+        self.content.append(content)
+    
+    def update(self,content):
+        self.content[-1] = content
+    
+    def finish(self,content):
+        return True
+
+    def clear(self):
+        self.content = []
+    
+    def get(self):
+        return self.content
 
 class chainProzessor():
     def __init__(self,llm,create_callback,update_callback,status_callback,cfg,meta_chain):
@@ -64,6 +82,12 @@ class chainProzessor():
             model_kwargs={"n_gpu_layers": int(os.getenv('GPU_LAYERS',default=cfg.get_config('model','gpu_layers',default=0)))},
             verbose=True,
             )
+        self.chain = []
+        self.chain_gen = False
+        self.current_summarizer = False
+        self.i = 0
+        self.summarizerOutput = summarizerOutput()
+        self.last_output = []
         self.__compile__()
 
     def __compile__(self):
@@ -91,7 +115,11 @@ class chainProzessor():
             chain_elem['instruction'] = item['prompt']
             chain_elem['action'] = item['action']
             self.chain.append(chain_elem)
+        self.chain_gen = self.__create_chain_gen__()
         #self.run()
+    def __create_chain_gen__(self):
+        for item in self.chain:
+            yield item
 
     def seperate_into_list(self,text):
         if '\n\n':
@@ -107,14 +135,19 @@ class chainProzessor():
                     text = [i for i in text if i]
         return text
 
-    def run(self,create_callback,update_callback,status_callback,last_answer_callback,initialprompt = ""):
+    def run(self,initialprompt = ""):
         #TODO: Nach jedem Schritt der chain zurück, für ggf. andere Aufträge. Handling von PDF-Zusammenfassung in diesem Zusammenhang gesondert.
-        i = 0
+        i = self.i
         output = []
         last_content = ""
-        while i < len(self.chain):
-            create_callback(str(output))
-            chain_elem = self.chain[i]
+        if self.current_summarizer:
+            if self.current_summarizer.run():
+                self.i += 1
+                self.current_summarizer = False
+            else:    
+                return False
+        for chain_elem in self.chain_gen:
+            self.create_callback(str(output))
             print("CHAINSTEP " + str(i))
             if i == 0:
                 if initialprompt:
@@ -125,22 +158,31 @@ class chainProzessor():
                 if 'pdf_action' in chain_elem and 'pdf_proc' in chain_elem:
                     pdf_proc = chain_elem['pdf_proc']
                     if chain_elem['pdf_action'] == 'Zusammenfassen':
-                        summarizer = pdftools.SimplePdfSummarizer(llm,pdf_proc,create_callback,update_callback,status_callback,cfg)
-                        output = summarizer.run(False)
+                        summarizer = pdftools.SimplePdfSummarizer(llm,pdf_proc,self.summarizerOutput.add,self.summarizerOutput.update,self.self.summarizerOutput.finish,cfg)
+                        self.current_summarizer = summarizer
+                        if summarizer.run():
+                            self.i = 1
+                            self.current_summarizer = False
+                            output = self.summarizerOutput.get()
+                            self.summarizerOutput.clear()
+                        else:
+                            return False
                     else:
                         output = pdf_proc.askPDF(chain_elem['instruction'])
+                        
                 else:
                     output = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()
-
                 if chain_elem['action'] == 3:
+                    #TODO handling summarized pdf = already list
                     output = self.seperate_into_list(output)
-                    
-                    
-               
+                self.i = 1
                 print("PROMPT: " + str(prompt))
                 print("OUTPUT: " + str(output))
-            else:
+                self.last_output = output
+                return False
+            else: # TODO handling chain abort from here
                 newoutput = []
+                output = self.last_output
                 if isinstance(output, list):
                     if chain_elem['action'] == 1 or chain_elem['action'] == 3  : #map each elem to prompt, no support for further expasion yet
                         print("Elementwise Mapping")
@@ -185,8 +227,10 @@ class chainProzessor():
             i += 1
             
             
-            update_callback(str(output))
+            self.update_callback(str(output))
             
 
         print(output)
-        status_callback("finished")
+        self.status_callback("finished")
+        self.chain_gen = self.__create_chain_gen__()
+        self.i = 0
