@@ -122,7 +122,9 @@ class chainProzessor():
             yield item
 
     def seperate_into_list(self,text):
-        if '\n\n':
+        if isinstance(text,list):
+            return text
+        if '\n\n' in text:
             text = text.split("\n\n")
             text = [i for i in text if i]
         else:
@@ -173,7 +175,6 @@ class chainProzessor():
                 else:
                     output = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()
                 if chain_elem['action'] == 3:
-                    #TODO handling summarized pdf = already list
                     output = self.seperate_into_list(output)
                 self.i = 1
                 print("PROMPT: " + str(prompt))
