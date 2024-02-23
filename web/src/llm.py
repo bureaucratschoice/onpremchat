@@ -142,6 +142,7 @@ class chainProzessor():
 
     def run(self,initialprompt = ""):
         #TODO: Handling output and restart options
+        #TODO: Handling input longer than window
         i = self.i
         
         last_content = ""
