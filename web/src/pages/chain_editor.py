@@ -36,6 +36,12 @@ def chain_editor(cfg,app,jobStat,taskQueue):
                             app.storage.user['chain_files'+str(i)] = app.storage.user['chain_files'+str(j)]
                             app.storage.user['chain_files'+str(j)] = []
                         break
+                        if 'chain_output'+str(j) in app.storage.user and app.storage.user['chain_output'+str(j)]:
+                            app.storage.user['chain_output'+str(i)] = app.storage.user['chain_output'+str(j)]
+                            app.storage.user['chain_output'+str(j)] = False
+                        if 'chain_restart'+str(j) in app.storage.user and app.storage.user['chain_restart'+str(j)]:
+                            app.storage.user['chain_restart'+str(i)] = app.storage.user['chain_restart'+str(j)]
+                            app.storage.user['chain_restart'+str(j)] = False
                     j = j+1
             i += 1
         i = 0
@@ -44,12 +50,16 @@ def chain_editor(cfg,app,jobStat,taskQueue):
                 text = ui.textarea(placeholder=placeholder).props('rounded outlined input-class=mx-3').props('clearable') \
                 .classes('w-full self-center').bind_value(app.storage.user, 'chain_prompt'+str(i)).on('keydown.enter', append)
                 ui.radio(action_mapping).props('inline').bind_value(app.storage.user, 'chain_action'+str(i))
+                ui.checkbox('Append to output').bind_value(app.storage.user, 'chain_output'+str(i))
+                ui.checkbox('Restart Chain').bind_value(app.storage.user, 'chain_restart'+str(i))
                 ui.select(filenames, multiple=True, value="", label='Aus Dateien').classes('w-64').props('use-chips').bind_value(app.storage.user, 'chain_files'+str(i))
             i += 1
         with ui.row().classes('w-full no-wrap items-center'):
             text = ui.textarea(placeholder=placeholder).props('rounded outlined input-class=mx-3').props('clearable') \
             .classes('w-full self-center').bind_value(app.storage.user, 'chain_prompt'+str(i)).on('keydown.enter', append)
             ui.radio(action_mapping).props('inline').bind_value(app.storage.user, 'chain_action'+str(i))
+            ui.checkbox('Append to output').bind_value(app.storage.user, 'chain_output'+str(i))
+            ui.checkbox('Restart Chain').bind_value(app.storage.user, 'chain_restart'+str(i))
             ui.select(filenames, multiple=True, value="", label='Aus Dateien').classes('w-64').props('use-chips').bind_value(app.storage.user, 'chain_files'+str(i))
         with ui.row().classes('w-full no-wrap items-center'):
             compile_btn = ui.button(icon="not_started", on_click=lambda: compile())
@@ -118,7 +128,7 @@ def chain_editor(cfg,app,jobStat,taskQueue):
         i = 0
         chain = []
         while 'chain_prompt'+str(i) in app.storage.user and app.storage.user['chain_prompt'+str(i)]:
-            chain_elem = {'prompt':app.storage.user['chain_prompt'+str(i)],'action':app.storage.user['chain_action'+str(i)] if 'chain_action'+str(i) in app.storage.user else 0,'files':app.storage.user['chain_files'+str(i)] if 'chain_files'+str(i) in app.storage.user else []}
+            chain_elem = {'prompt':app.storage.user['chain_prompt'+str(i)],'action':app.storage.user['chain_action'+str(i)] if 'chain_action'+str(i) in app.storage.user else 0,'files':app.storage.user['chain_files'+str(i)] if 'chain_files'+str(i) in app.storage.user else [],'output':app.storage.user['chain_output'+str(i)] if 'chain_output'+str(i) in app.storage.user else False,'restart':app.storage.user['chain_restart'+str(i)] if 'chain_restart'+str(i) in app.storage.user else False}
             chain.append(chain_elem)
             i += 1
         meta_chain = {'chain_id':app.storage.user['chain_id'],'file_id':app.storage.browser['id'],'chain':chain}

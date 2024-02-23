@@ -88,6 +88,7 @@ class chainProzessor():
         self.i = 0
         self.summarizerOutput = summarizerOutput()
         self.last_output = []
+        self.final_output = []
         self.__compile__()
 
     def __compile__(self):
@@ -114,6 +115,8 @@ class chainProzessor():
                 chain_elem['pdf_proc'] = proc
             chain_elem['instruction'] = item['prompt']
             chain_elem['action'] = item['action']
+            chain_elem['output'] = item['output']
+            chain_elem['restart'] = item['restart']
             self.chain.append(chain_elem)
         self.chain_gen = self.__create_chain_gen__()
         #self.run()
@@ -138,39 +141,36 @@ class chainProzessor():
         return text
 
     def run(self,initialprompt = ""):
-        #TODO: Nach jedem Schritt der chain zurück, für ggf. andere Aufträge. Handling von PDF-Zusammenfassung in diesem Zusammenhang gesondert.
+        #TODO: Handling output and restart options
         i = self.i
-        output = []
+        
         last_content = ""
         if self.current_summarizer:
             if self.current_summarizer.run():
                 self.i += 1
+                self.last_output = self.summarizerOutput.get()
+                self.summarizerOutput.clear()
                 self.current_summarizer = False
             else:    
                 return False
         for chain_elem in self.chain_gen:
             self.create_callback(str(output))
             print("CHAINSTEP " + str(i))
+            if 'pdf_action' in chain_elem and 'pdf_proc' in chain_elem:
+                    pdf_proc = chain_elem['pdf_proc']
+                    if chain_elem['pdf_action'] == 'Zusammenfassen':
+                        summarizer = pdftools.SimplePdfSummarizer(llm,pdf_proc,self.summarizerOutput.add,self.summarizerOutput.update,self.self.summarizerOutput.finish,cfg)
+                        self.current_summarizer = summarizer
+                        return False
             if i == 0:
                 if initialprompt:
                     prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}. EINGABE:{initialprompt}. "
                 else:
                     prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}"
 
-                if 'pdf_action' in chain_elem and 'pdf_proc' in chain_elem:
+                if 'pdf_action' in chain_elem and 'pdf_proc' in chain_elem and chain_elem['pdf_action'] == 'Frage beantworten':
                     pdf_proc = chain_elem['pdf_proc']
-                    if chain_elem['pdf_action'] == 'Zusammenfassen':
-                        summarizer = pdftools.SimplePdfSummarizer(llm,pdf_proc,self.summarizerOutput.add,self.summarizerOutput.update,self.self.summarizerOutput.finish,cfg)
-                        self.current_summarizer = summarizer
-                        if summarizer.run():
-                            self.i = 1
-                            self.current_summarizer = False
-                            output = self.summarizerOutput.get()
-                            self.summarizerOutput.clear()
-                        else:
-                            return False
-                    else:
-                        output = pdf_proc.askPDF(chain_elem['instruction'])
+                    output = pdf_proc.askPDF(chain_elem['instruction'])
                         
                 else:
                     output = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()
@@ -181,7 +181,7 @@ class chainProzessor():
                 print("OUTPUT: " + str(output))
                 self.last_output = output
                 return False
-            else: # TODO handling chain abort from here
+            else: 
                 newoutput = []
                 output = self.last_output
                 if isinstance(output, list):
@@ -190,48 +190,67 @@ class chainProzessor():
                         for item in output:
                             if item:
                                 item = str(item).strip()
-                                prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}. EINGABE:{item}. "
-                                print("PROMPT: " + str(prompt))
-                                newresult = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()
-                                print("OUTPUT: " + str(newresult))
+                                if 'pdf_action' in chain_elem and 'pdf_proc' in chain_elem and chain_elem['pdf_action'] == 'Frage beantworten':
+                                    pdf_proc = chain_elem['pdf_proc']
+                                    newresult = pdf_proc.askPDF(item)
+                                else:
+                                    prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}. EINGABE:{item}. "
+                                    print("PROMPT: " + str(prompt))
+                                    newresult = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()
+                                    print("OUTPUT: " + str(newresult))
                                 newoutput.append(newresult)
-                    if chain_elem['action'] == 2: #reduce list to one
+                    if chain_elem['action'] == 2: #reduce list to one #Handling ask PDF from here
                         
                         fulltext = ""
                         for item in output:
                             fulltext += item + "\n" 
                         fulltext = fulltext.strip()
                         print("Reduce List")
-                        prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}. EINGABE:{output}. "
-                        print("PROMPT: " + str(prompt))
-                        newoutput = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()
+                        if 'pdf_action' in chain_elem and 'pdf_proc' in chain_elem and chain_elem['pdf_action'] == 'Frage beantworten':
+                            pdf_proc = chain_elem['pdf_proc']
+                            newoutput = pdf_proc.askPDF(fulltext)
+                        else:
+                            prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}. EINGABE:{fulltext}. "
+                            print("PROMPT: " + str(prompt))
+                            newoutput = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()
                         print("OUTPUT: " + str(newoutput))
 
                 else:
                     if chain_elem['action'] == 1 or chain_elem['action'] == 2: #reduce is like map without list
                         print("Reduce or map without list ")
-                        f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}. EINGABE:{output}. "
-                        print("PROMPT: " + str(prompt))
-                        newoutput = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()
+                        if 'pdf_action' in chain_elem and 'pdf_proc' in chain_elem and chain_elem['pdf_action'] == 'Frage beantworten':
+                            pdf_proc = chain_elem['pdf_proc']
+                            newoutput = pdf_proc.askPDF(output)
+                        else:
+                            prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}. EINGABE:{output}. "
+                            print("PROMPT: " + str(prompt))
+                            newoutput = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()
                         print("OUTPUT: " + str(newoutput))
                     else: #expand
                         print("Expand without list ")
-                        prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}. EINGABE:{output}. "
-                        print("PROMPT: " + str(prompt))
-                        newoutput = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()    
+                        if 'pdf_action' in chain_elem and 'pdf_proc' in chain_elem and chain_elem['pdf_action'] == 'Frage beantworten':
+                            pdf_proc = chain_elem['pdf_proc']
+                            newoutput = pdf_proc.askPDF(output)
+                        else:
+                            prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}. EINGABE:{output}. "
+                            print("PROMPT: " + str(prompt))
+                            newoutput = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()    
                         print("OUTPUT: " + str(newoutput))
-                        if '\n' in newoutput:   
-                            newoutput = newoutput.split("\n")
-                            newoutput = [i for i in newoutput if i]    
+                        newoutput = self.seperate_into_list(newoutput)
                   
-                output = newoutput
-            i += 1
-            
-            
-            self.update_callback(str(output))
-            
+                self.last_output = newoutput
+            self.i += 1
+            self.update_callback(str(last_output))
+            return False
 
-        print(output)
+        print(self.last_output)
         self.status_callback("finished")
         self.chain_gen = self.__create_chain_gen__()
         self.i = 0
+        if self.final_output:
+            self.final_output.append(self.last_output)
+        else:
+            self.final_output = [self.last_output]
+        self.last_output = []
+
+        return self.final_output
