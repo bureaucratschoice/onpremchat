@@ -139,6 +139,8 @@ class chainProzessor():
                 if ',' in text:
                     text = text.split(",")
                     text = [i for i in text if i]
+                else:
+                    text = [text[:len(text)/2],text[len(text)/2+1:]]
         return text
 
     def append_to_final_list(self,item):
