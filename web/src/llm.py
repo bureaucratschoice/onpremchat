@@ -89,6 +89,7 @@ class chainProzessor():
         self.summarizerOutput = summarizerOutput()
         self.last_output = []
         self.final_output = []
+        self.append_to_final = False
         self.__compile__()
 
     def __compile__(self):
@@ -140,16 +141,39 @@ class chainProzessor():
                     text = [i for i in text if i]
         return text
 
+    def append_to_final_list(self,item):
+        if self.final_output:
+            if isinstance(item, list):
+                self.final_output += item
+            else:
+                self.final_output.append(item)
+        else:
+            if isinstance(item, list):
+                self.final_output = item
+            else:
+                self.final_output = [item]
+    
+    def long_prompt_handler(self,prompt,input):
+        #TODO: Find way to make sure, that prompt and input allways fit
+               snippet_tokens = len(self.llm.tokenize(text.encode(encoding = 'UTF-8', errors = 'strict')))
+        if snippet_tokens > int(os.getenv('NUMBER_OF_TOKENS_PDF',default=self.cfg.get_config('model','number_of_tokens_pdf',default=3800))):
+            snips = self.seperate_into_list(prompt)
+            snip1 = snips[:len(snips)/2]
+            snip2 = snips[len(snips)/2+1]
+
     def run(self,initialprompt = ""):
-        #TODO: Handling output and restart options
         #TODO: Handling input longer than window
         i = self.i
-        
+        appended_to_final = False
         last_content = ""
         if self.current_summarizer:
             if self.current_summarizer.run():
                 self.i += 1
                 self.last_output = self.summarizerOutput.get()
+                if self.append_to_final:
+                    self.append_to_final_list(self.last_output)
+                    appended_to_final = True
+                self.append_to_final = False
                 self.summarizerOutput.clear()
                 self.current_summarizer = False
             else:    
@@ -162,7 +186,12 @@ class chainProzessor():
                     if chain_elem['pdf_action'] == 'Zusammenfassen':
                         summarizer = pdftools.SimplePdfSummarizer(llm,pdf_proc,self.summarizerOutput.add,self.summarizerOutput.update,self.self.summarizerOutput.finish,cfg)
                         self.current_summarizer = summarizer
+                        if 'output' in chain_elem and chain_elem['output'] == True:
+                            self.append_to_final = True
                         return False
+            if 'restart' in chain_elem and chain_elem['restart'] == True:
+                self.i = 0
+                i = 0
             if i == 0:
                 if initialprompt:
                     prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}. EINGABE:{initialprompt}. "
@@ -174,6 +203,7 @@ class chainProzessor():
                     output = pdf_proc.askPDF(chain_elem['instruction'])
                         
                 else:
+                    
                     output = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()
                 if chain_elem['action'] == 3:
                     output = self.seperate_into_list(output)
@@ -181,6 +211,9 @@ class chainProzessor():
                 print("PROMPT: " + str(prompt))
                 print("OUTPUT: " + str(output))
                 self.last_output = output
+                if 'output' in chain_elem and chain_elem['output'] == True:
+                    self.append_to_final_list(self.last_output)
+                    appended_to_final = True
                 return False
             else: 
                 newoutput = []
@@ -240,6 +273,9 @@ class chainProzessor():
                         newoutput = self.seperate_into_list(newoutput)
                   
                 self.last_output = newoutput
+                if 'output' in chain_elem and chain_elem['output'] == True:
+                    self.append_to_final_list(self.last_output)
+                    appended_to_final = True
             self.i += 1
             self.update_callback(str(last_output))
             return False
@@ -248,10 +284,8 @@ class chainProzessor():
         self.status_callback("finished")
         self.chain_gen = self.__create_chain_gen__()
         self.i = 0
-        if self.final_output:
-            self.final_output.append(self.last_output)
-        else:
-            self.final_output = [self.last_output]
+        if not appended_to_final:
+            self.append_to_final_list(self.last_output)
         self.last_output = []
 
         return self.final_output
