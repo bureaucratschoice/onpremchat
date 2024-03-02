@@ -32,7 +32,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg,statistic) -> None:
     greeting = os.getenv('GREETING',default=cfg.get_config('frontend','chat-greeting',default="Achtung, prüfen Sie jede Antwort bevor Sie diese in irgendeiner Form weiterverwenden. Je länger Ihre Frage ist bzw. je länger der bisherige Chatverlauf, desto länger brauche ich zum lesen. Es kann daher dauern, bis ich anfange Ihre Antwort zu schreiben. Die Länge der Warteschlange ist aktuell: "))
     pdf_greeting = os.getenv('PDFGREETING',default=cfg.get_config('frontend','pdf-greeting',default="Laden Sie ein PDF hoch, damit ich Ihnen Fragen hierzu beantworten kann. Achtung, prüfen Sie jede Antwort bevor Sie diese in irgendeiner Form weiterverwenden. Die Länge der Warteschlange ist aktuell: "))
     pdf_processed = os.getenv('PDFPROC',default=cfg.get_config('frontend','pdf-preprocessing',default="Ihr PDF wird gerade verarbeitet. Der aktuelle Status ist: "))
-    pdf_ready = PDFReady()
+    
     def navigation():
         anchor_style = r'a:link, a:visited {color: inherit !important; text-decoration: none; font-weight: 500}'
         ui.add_head_html(f'<style>{anchor_style}</style>')
@@ -259,6 +259,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg,statistic) -> None:
         thinking: bool = False
         timer = ui.timer(1.0, lambda: pdf_messages.refresh())
         assign_uuid_if_missing()
+        pdf_ready = PDFReady()
         @ui.refreshable
         def pdf_messages() -> None:
             assign_uuid_if_missing()

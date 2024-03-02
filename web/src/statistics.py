@@ -28,8 +28,9 @@ class Statistic():
 
     def updateQueueSize(self,size,event='max_queue'):
         if event in self.stat and 'dates' in self.stat[event] and 'values' in self.stat[event] and self.stat[event]['dates'] and self.stat[event]['values']:
-            if self.stat[event]['dates'][-1] == date.today() and self.stat[event]['values'][-1] < size :
-                self.stat[event]['values'][-1] = size
+            if self.stat[event]['dates'][-1] == date.today():
+                if self.stat[event]['values'][-1] < size: 
+                    self.stat[event]['values'][-1] = size
             else:
                 self.stat[event]['dates'].append(date.today())
                 self.stat[event]['values'].append(size)
