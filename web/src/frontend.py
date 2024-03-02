@@ -33,7 +33,20 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
     pdf_greeting = os.getenv('PDFGREETING',default=cfg.get_config('frontend','pdf-greeting',default="Laden Sie ein PDF hoch, damit ich Ihnen Fragen hierzu beantworten kann. Achtung, prüfen Sie jede Antwort bevor Sie diese in irgendeiner Form weiterverwenden. Die Länge der Warteschlange ist aktuell: "))
     pdf_processed = os.getenv('PDFPROC',default=cfg.get_config('frontend','pdf-preprocessing',default="Ihr PDF wird gerade verarbeitet. Der aktuelle Status ist: "))
     pdf_ready = PDFReady()
-    
+    def navigation():
+        anchor_style = r'a:link, a:visited {color: inherit !important; text-decoration: none; font-weight: 500}'
+        ui.add_head_html(f'<style>{anchor_style}</style>')
+        title = os.getenv('APP_TITLE',default=cfg.get_config('frontend','app_title',default="MWICHT"))
+        ui.page_title(title)
+        with ui.header().classes(replace='row items-center') as header:
+            ui.button(on_click=lambda: left_drawer.toggle(), icon='menu').props('flat color=white')
+
+        with ui.left_drawer().classes('bg-blue-100') as left_drawer:
+            ui.link("Home",home)
+            tochat = os.getenv('TOCHAT',default=cfg.get_config('frontend','to_chat',default="Zum Chat"))
+            ui.link(tochat, show)
+            topdf = os.getenv('TOPDF',default=cfg.get_config('frontend','to_pdf',default="Zu den PDF-Werkzeugen"))
+            ui.link(topdf, pdfpage)
     @ui.page('/chat')
     
     def show():
@@ -144,12 +157,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
             timer.activate()
             chat_messages.refresh()
             
-
-        anchor_style = r'a:link, a:visited {color: inherit !important; text-decoration: none; font-weight: 500}'
-        ui.add_head_html(f'<style>{anchor_style}</style>')
-        title = os.getenv('APP_TITLE',default=cfg.get_config('frontend','app_title',default="MWICHT"))
-
-        ui.page_title(title)
+        navigation()
         # the queries below are used to expand the contend down to the footer (content can then use flex-grow to expand)
         ui.query('.q-page').classes('flex')
         ui.query('.nicegui-content').classes('w-full')
@@ -159,6 +167,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
 
         with ui.tab_panels(tabs, value=chat_tab).classes('w-full max-w-2xl mx-auto flex-grow items-stretch'):
             with ui.tab_panel(chat_tab).classes('items-stretch'):
+                
                 chat_messages()
 
 
@@ -219,10 +228,11 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
 
     @ui.page('/')
     def home():
-        tochat = os.getenv('TOCHAT',default=cfg.get_config('frontend','to_chat',default="Zum Chat"))
-        ui.button(tochat, on_click=lambda: ui.open(show, new_tab=False))
-        topdf = os.getenv('TOPDF',default=cfg.get_config('frontend','to_pdf',default="Zu den PDF-Werkzeugen"))
-        ui.button(topdf, on_click=lambda: ui.open(pdfpage, new_tab=False))
+        navigation()
+        title = os.getenv('APP_TITLE',default=cfg.get_config('frontend','app_title',default="MWICHT"))
+        with ui.image('/app/static/home_background.jpeg').classes('transparent fill'):
+            ui.label(title).classes('absolute-top text-center transparent')
+        
     @ui.page('/pdf')
     def pdfpage():
 
@@ -380,21 +390,19 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
             timer.activate()
             pdf_messages.refresh()
 
-        anchor_style = r'a:link, a:visited {color: inherit !important; text-decoration: none; font-weight: 500}'
-        ui.add_head_html(f'<style>{anchor_style}</style>')
-        title = "PDF_RAG"
-
-        ui.page_title(title)
+        navigation()
+        
         # the queries below are used to expand the contend down to the footer (content can then use flex-grow to expand)
         ui.query('.q-page').classes('flex')
         ui.query('.nicegui-content').classes('w-full')
+        
+        
 
         with ui.tabs().classes('w-full') as tabs:
-            pdf_tab = ui.tab('PDF')
+                pdf_tab = ui.tab('PDF')
 
         with ui.tab_panels(tabs, value=pdf_tab).classes('w-full max-w-2xl mx-auto flex-grow items-stretch'):
             with ui.tab_panel(pdf_tab).classes('items-stretch'):
-
                 pdf_messages()
 
                 ui.upload(on_upload=handle_upload,multiple=True,label='Upload PDF',max_total_size=9048576).props('accept=.pdf').classes('max-w-full').bind_visibility_from(pdf_ready,'ready_to_upload')
