@@ -26,7 +26,7 @@ def assign_uuid_if_missing():
     if not 'pdf_job' in app.storage.user or not app.storage.user['pdf_job']:
         app.storage.user['pdf_job'] = uuid4()
 
-def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
+def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg,statistic) -> None:
     assi = os.getenv('ASSISTANT',default=cfg.get_config('frontend','assistant',default="Assistent:in"))
     you = os.getenv('YOU',default=cfg.get_config('frontend','you',default="Sie"))
     greeting = os.getenv('GREETING',default=cfg.get_config('frontend','chat-greeting',default="Achtung, prüfen Sie jede Antwort bevor Sie diese in irgendeiner Form weiterverwenden. Je länger Ihre Frage ist bzw. je länger der bisherige Chatverlauf, desto länger brauche ich zum lesen. Es kann daher dauern, bis ich anfange Ihre Antwort zu schreiben. Die Länge der Warteschlange ist aktuell: "))
@@ -142,6 +142,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
             app.storage.user['repeat_penalty'] = os.getenv('REPEAT_PENALTY',default=cfg.get_config('model','repeat_penalty',default=1.15))*100
 
         async def send() -> None:
+            statistic.addEvent('chat')
             assign_uuid_if_missing()
             message = app.storage.user['text']
             custom_config = {'temperature':app.storage.user['temperature']/100,'max_tokens':app.storage.user['max_tokens'],'top_k':app.storage.user['top_k'],'top_p':app.storage.user['top_p']/100,'repeat_penalty':app.storage.user['repeat_penalty']/100}
@@ -229,9 +230,26 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
     @ui.page('/')
     def home():
         navigation()
+        statistic.addEvent('visit')
         title = os.getenv('APP_TITLE',default=cfg.get_config('frontend','app_title',default="MWICHT"))
         with ui.image('/app/static/home_background.jpeg').classes('transparent fill'):
             ui.label(title).classes('absolute-top text-center transparent')
+
+    @ui.page('/statistic')
+    def statistics():
+        navigation()
+        title = os.getenv('APP_TITLE',default=cfg.get_config('frontend','app_title',default="MWICHT"))
+        categories = ['visit','chat','pdf_question','pdf_summary','max_queue']
+        
+        for c in categories:
+            with ui.column().classes('w-full max-w-3xl mx-auto my-6'):
+                with ui.row().classes('w-full no-wrap items-center'):
+                    ui.label('CSS').style('color: #000').set_text(c)
+                dates, values = statistic.getEventStat(c)
+                for d,v in zip(dates,values):
+                    with ui.row().classes('w-full no-wrap items-center'):
+                        ui.label('CSS').style('color: #000').set_text(d)
+                        ui.label('CSS').style('color: #000').set_text(v)
         
     @ui.page('/pdf')
     def pdfpage():
@@ -338,6 +356,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
                 ui.run_javascript('navigator.clipboard.writeText(`' + text + '`)', timeout=5.0)
 
         async def send() -> None:
+            statistic.addEvent('pdf_question')
             assign_uuid_if_missing()
             message = app.storage.user['pdf_question']
             #custom_config = {'temperature':app.storage.user['temperature']/100,'max_tokens':app.storage.user['max_tokens'],'top_k':app.storage.user['top_k'],'top_p':app.storage.user['top_p']/100,'repeat_penalty':app.storage.user['repeat_penalty']/100}
@@ -355,6 +374,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
             pdf_messages.refresh()
 
         def summarize_pdf() -> None:
+            statistic.addEvent('pdf_summary')
             assign_uuid_if_missing()
             jobStat.addJob(app.storage.browser['id'],app.storage.user['pdf_job'],"",job_type = 'pdf_summarize' )
             job = {'token':app.storage.browser['id'],'uuid':app.storage.user['pdf_job']}
