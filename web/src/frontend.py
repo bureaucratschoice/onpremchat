@@ -25,6 +25,8 @@ def assign_uuid_if_missing():
         app.storage.user['chat_job'] = uuid4()
     if not 'pdf_job' in app.storage.user or not app.storage.user['pdf_job']:
         app.storage.user['pdf_job'] = uuid4()
+    if not 'pdf_ready' in app.storage.user or not app.storage.user['pdf_ready']:
+        app.storage.user['pdf_ready']=PDFReady()
 
 def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg,statistic) -> None:
     assi = os.getenv('ASSISTANT',default=cfg.get_config('frontend','assistant',default="Assistent:in"))
@@ -263,7 +265,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg,statistic) -> None:
         thinking: bool = False
         timer = ui.timer(1.0, lambda: pdf_messages.refresh())
         assign_uuid_if_missing()
-        pdf_ready = PDFReady()
+        pdf_ready = app.storage.user['pdf_ready']
         @ui.refreshable
         def pdf_messages() -> None:
             assign_uuid_if_missing()
