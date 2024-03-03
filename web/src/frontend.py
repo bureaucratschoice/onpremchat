@@ -242,14 +242,18 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg,statistic) -> None:
         categories = ['visit','chat','pdf_question','pdf_summary','max_queue']
         
         for c in categories:
-            with ui.column().classes('w-full max-w-3xl mx-auto my-6'):
-                with ui.row().classes('w-full no-wrap items-center'):
-                    ui.label('CSS').style('color: #000').set_text(c)
+            
+                ui.label('CSS').style('color: #000').set_text(c)
                 dates, values = statistic.getEventStat(c)
+                columns = [
+                    {'name': 'date', 'label': 'Date', 'field': 'date', 'required': True, 'align': 'left'},
+                    {'name': 'value', 'label': c, 'field': 'value', 'sortable': True},
+                ]
+                rows = []
                 for d,v in zip(dates,values):
-                    with ui.row().classes('w-full no-wrap items-center'):
-                        ui.label('CSS').style('color: #000').set_text(d)
-                        ui.label('CSS').style('color: #000').set_text(v)
+                    rows.append({'date': d, 'value': v})
+                
+                ui.table(columns=columns, rows=rows, row_key='name')
         
     @ui.page('/pdf')
     def pdfpage():
