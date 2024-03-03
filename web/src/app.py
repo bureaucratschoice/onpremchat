@@ -23,7 +23,7 @@ import pdftools
 
 
 from pdfrag import PDF_Processor
-
+from statistics import Statistic
 
 
 
@@ -168,18 +168,20 @@ class jobStatus():
             
   
 class MainProcessor (threading.Thread):
-    def __init__(self,taskLock,taskQueue,jobStat):
+    def __init__(self,taskLock,taskQueue,jobStat,statistic):
         super().__init__(target="MainProcessor")
        
         self.taskLock = taskLock
         self.taskQueue = taskQueue
         self.jobStat = jobStat
+        self.statistic = statistic
         
     def run(self):
         while True:
             job = self.taskQueue.get(block=True)
             self.jobStat.updateStatus(job['token'],job['uuid'],"processing")
             item = self.jobStat.getJobStatus(job['token'],job['uuid'])
+            self.statistic.updateQueueSize(self.jobStat.countQueuedJobs())
             
             if 'job_type' in item and item['job_type'] == 'pdf_processing':
                 if 'filepath' in job:
@@ -331,7 +333,9 @@ jobStat = jobStatus()
 taskLock = threading.Lock()
 taskQueue = queue.Queue(1000)
 
-thread = MainProcessor(taskLock,taskQueue,jobStat)
+statistic = Statistic()
+
+thread = MainProcessor(taskLock,taskQueue,jobStat,statistic)
 thread.start()
 
 
@@ -418,4 +422,4 @@ async def generate_text(item: Item) -> Any:
         result = "Access denied."
     return result
 
-frontend.init(app,jobStat,taskQueue,cfg)
+frontend.init(app,jobStat,taskQueue,cfg,statistic)
