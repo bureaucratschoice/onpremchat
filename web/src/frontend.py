@@ -27,21 +27,39 @@ class ChainReady:
         self.ready = False
         self.answered = False
         self.ready_to_upload = True
-#def assign_uuid_if_missing():
-#    if not 'chat_job' in app.storage.user or not app.storage.user['chat_job']:
-#        app.storage.user['chat_job'] = uuid4()
-#    if not 'pdf_job' in app.storage.user or not app.storage.user['pdf_job']:
-#        app.storage.user['pdf_job'] = uuid4()
 
-def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
+#MOVE TO EXTRA FILE
+def assign_uuid_if_missing():
+    if not 'chat_job' in app.storage.user or not app.storage.user['chat_job']:
+        app.storage.user['chat_job'] = uuid4()
+    if not 'pdf_job' in app.storage.user or not app.storage.user['pdf_job']:
+        app.storage.user['pdf_job'] = uuid4()
+    if not 'pdf_ready' in app.storage.user or not app.storage.user['pdf_ready']:
+        app.storage.user['pdf_ready']=PDFReady()
+#MOVE TO EXTRA FILE
+
+def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg,statistic) -> None:
     assi = os.getenv('ASSISTANT',default=cfg.get_config('frontend','assistant',default="Assistent:in"))
     you = os.getenv('YOU',default=cfg.get_config('frontend','you',default="Sie"))
     greeting = os.getenv('GREETING',default=cfg.get_config('frontend','chat-greeting',default="Achtung, prüfen Sie jede Antwort bevor Sie diese in irgendeiner Form weiterverwenden. Je länger Ihre Frage ist bzw. je länger der bisherige Chatverlauf, desto länger brauche ich zum lesen. Es kann daher dauern, bis ich anfange Ihre Antwort zu schreiben. Die Länge der Warteschlange ist aktuell: "))
     pdf_greeting = os.getenv('PDFGREETING',default=cfg.get_config('frontend','pdf-greeting',default="Laden Sie ein PDF hoch, damit ich Ihnen Fragen hierzu beantworten kann. Achtung, prüfen Sie jede Antwort bevor Sie diese in irgendeiner Form weiterverwenden. Die Länge der Warteschlange ist aktuell: "))
     pdf_processed = os.getenv('PDFPROC',default=cfg.get_config('frontend','pdf-preprocessing',default="Ihr PDF wird gerade verarbeitet. Der aktuelle Status ist: "))
-    pdf_ready = PDFReady()
+
     #chain_ready = ChainReady()
-    
+    def navigation():
+        anchor_style = r'a:link, a:visited {color: inherit !important; text-decoration: none; font-weight: 500}'
+        ui.add_head_html(f'<style>{anchor_style}</style>')
+        title = os.getenv('APP_TITLE',default=cfg.get_config('frontend','app_title',default="MWICHT"))
+        ui.page_title(title)
+        with ui.header().classes(replace='row items-center') as header:
+            ui.button(on_click=lambda: left_drawer.toggle(), icon='menu').props('flat color=white')
+
+        with ui.left_drawer().classes('bg-blue-100') as left_drawer:
+            ui.link("Home",home)
+            tochat = os.getenv('TOCHAT',default=cfg.get_config('frontend','to_chat',default="Zum Chat"))
+            ui.link(tochat, show)
+            topdf = os.getenv('TOPDF',default=cfg.get_config('frontend','to_pdf',default="Zu den PDF-Werkzeugen"))
+            ui.link(topdf, pdfpage)
     @ui.page('/chat')
     
     def show():
@@ -138,6 +156,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
 
         async def send() -> None:
             assign_uuid_if_missing(app)
+            statistic.addEvent('chat')
             message = app.storage.user['text']
             custom_config = {'temperature':app.storage.user['temperature']/100,'max_tokens':app.storage.user['max_tokens'],'top_k':app.storage.user['top_k'],'top_p':app.storage.user['top_p']/100,'repeat_penalty':app.storage.user['repeat_penalty']/100}
             text.value = ''
@@ -152,12 +171,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
             timer.activate()
             chat_messages.refresh()
             
-
-        anchor_style = r'a:link, a:visited {color: inherit !important; text-decoration: none; font-weight: 500}'
-        ui.add_head_html(f'<style>{anchor_style}</style>')
-        title = os.getenv('APP_TITLE',default=cfg.get_config('frontend','app_title',default="MWICHT"))
-
-        ui.page_title(title)
+        navigation()
         # the queries below are used to expand the contend down to the footer (content can then use flex-grow to expand)
         ui.query('.q-page').classes('flex')
         ui.query('.nicegui-content').classes('w-full')
@@ -167,6 +181,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
 
         with ui.tab_panels(tabs, value=chat_tab).classes('w-full max-w-2xl mx-auto flex-grow items-stretch'):
             with ui.tab_panel(chat_tab).classes('items-stretch'):
+                
                 chat_messages()
 
 
@@ -227,15 +242,36 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
 
     @ui.page('/')
     def home():
-        tochat = os.getenv('TOCHAT',default=cfg.get_config('frontend','to_chat',default="Zum Chat"))
-        ui.button(tochat, on_click=lambda: ui.open(show, new_tab=False))
-        topdf = os.getenv('TOPDF',default=cfg.get_config('frontend','to_pdf',default="Zu den PDF-Werkzeugen"))
-        ui.button(topdf, on_click=lambda: ui.open(pdfpage, new_tab=False))
+        navigation()
+        statistic.addEvent('visit')
+        title = os.getenv('APP_TITLE',default=cfg.get_config('frontend','app_title',default="MWICHT"))
+        with ui.image('/app/static/home_background.jpeg').classes('transparent fill'):
+            ui.label(title).classes('absolute-top text-center transparent')ambda: ui.open(pdfpage, new_tab=False))
 
     @ui.page('/editor')
     def editor():
         chain_editor(cfg,app,jobStat,taskQueue)
 
+    @ui.page('/statistic')
+    def statistics():
+        navigation()
+        title = os.getenv('APP_TITLE',default=cfg.get_config('frontend','app_title',default="MWICHT"))
+        categories = ['visit','chat','pdf_question','pdf_summary','max_queue']
+        
+        for c in categories:
+            
+                ui.label('CSS').style('color: #000').set_text(c)
+                dates, values = statistic.getEventStat(c)
+                columns = [
+                    {'name': 'date', 'label': 'Date', 'field': 'date', 'required': True, 'align': 'left'},
+                    {'name': 'value', 'label': c, 'field': 'value', 'sortable': True},
+                ]
+                rows = []
+                for d,v in zip(dates,values):
+                    rows.append({'date': d, 'value': v})
+                
+                ui.table(columns=columns, rows=rows, row_key='name')
+        
     @ui.page('/pdf')
     def pdfpage():
 
@@ -243,7 +279,10 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
         pdfmessages: List[Tuple[str, str]] = [] 
         thinking: bool = False
         timer = ui.timer(1.0, lambda: pdf_messages.refresh())
+
         assign_uuid_if_missing(app)
+        pdf_ready = app.storage.user['pdf_ready']
+
         @ui.refreshable
         def pdf_messages() -> None:
             assign_uuid_if_missing(app)
@@ -342,6 +381,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
 
         async def send() -> None:
             assign_uuid_if_missing(app)
+            statistic.addEvent('pdf_question')
             message = app.storage.user['pdf_question']
             #custom_config = {'temperature':app.storage.user['temperature']/100,'max_tokens':app.storage.user['max_tokens'],'top_k':app.storage.user['top_k'],'top_p':app.storage.user['top_p']/100,'repeat_penalty':app.storage.user['repeat_penalty']/100}
             text.value = ''
@@ -358,7 +398,10 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
             pdf_messages.refresh()
 
         def summarize_pdf() -> None:
+
             assign_uuid_if_missing(app)
+
+            statistic.addEvent('pdf_summary')
             jobStat.addJob(app.storage.browser['id'],app.storage.user['pdf_job'],"",job_type = 'pdf_summarize' )
             job = {'token':app.storage.browser['id'],'uuid':app.storage.user['pdf_job']}
             try:
@@ -393,21 +436,19 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg) -> None:
             timer.activate()
             pdf_messages.refresh()
 
-        anchor_style = r'a:link, a:visited {color: inherit !important; text-decoration: none; font-weight: 500}'
-        ui.add_head_html(f'<style>{anchor_style}</style>')
-        title = "PDF_RAG"
-
-        ui.page_title(title)
+        navigation()
+        
         # the queries below are used to expand the contend down to the footer (content can then use flex-grow to expand)
         ui.query('.q-page').classes('flex')
         ui.query('.nicegui-content').classes('w-full')
+        
+        
 
         with ui.tabs().classes('w-full') as tabs:
-            pdf_tab = ui.tab('PDF')
+                pdf_tab = ui.tab('PDF')
 
         with ui.tab_panels(tabs, value=pdf_tab).classes('w-full max-w-2xl mx-auto flex-grow items-stretch'):
             with ui.tab_panel(pdf_tab).classes('items-stretch'):
-
                 pdf_messages()
 
                 ui.upload(on_upload=handle_upload,multiple=True,label='Upload PDF',max_total_size=9048576).props('accept=.pdf').classes('max-w-full').bind_visibility_from(pdf_ready,'ready_to_upload')
