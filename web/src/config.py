@@ -3,8 +3,12 @@ import yaml
 class config:
     def __init__(self):
         self.config = {}
-        with open('/config/config.yml', 'r') as file:
-            config = yaml.safe_load(file)
+        try: 
+            with open('/config/config.yml', 'r') as file:
+                self.config = yaml.safe_load(file)
+        except:
+            print("config file not found")
+            self.config = {}
     
     def store_config(self):
         with open('/config/config.yml', 'w') as file:
