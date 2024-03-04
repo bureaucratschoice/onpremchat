@@ -7,6 +7,7 @@ from fastapi import FastAPI
 import os
 import time
 from uuid import uuid4
+import json
 
 class InputText:
     def __init__(self):
@@ -20,13 +21,14 @@ class PDFReady:
         self.answered = False
         self.ready_to_upload = True
 
+
 def assign_uuid_if_missing():
     if not 'chat_job' in app.storage.user or not app.storage.user['chat_job']:
         app.storage.user['chat_job'] = uuid4()
     if not 'pdf_job' in app.storage.user or not app.storage.user['pdf_job']:
         app.storage.user['pdf_job'] = uuid4()
     if not 'pdf_ready' in app.storage.user or not app.storage.user['pdf_ready']:
-        app.storage.user['pdf_ready']=PDFReady()
+        app.storage.user['pdf_ready']= {'ready':False,'answered':False,'ready_to_upload':True}
 
 def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg,statistic) -> None:
     assi = os.getenv('ASSISTANT',default=cfg.get_config('frontend','assistant',default="Assistent:in"))
@@ -277,19 +279,19 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg,statistic) -> None:
             if 'job_type' in status and status['job_type'] == 'pdf_processing' and 'status' in status:
                 pdfmessages.append((assi, pdf_processed + str(status['status'])))
                 if not status['status'] == 'finished':
-                    pdf_ready.ready = False
+                    pdf_ready['ready'] = False
                     
                 else:
-                    pdf_ready.ready = True
-                    pdf_ready.answered = True
+                    pdf_ready['ready'] = True
+                    pdf_ready['answered'] = True
                     
 
             if 'job_type' in status and status['job_type'] == 'pdf_chat':
                 if 'status' in status and status['status'] == 'finished':
-                    pdf_ready.answered = True
+                    pdf_ready['answered'] = True
                 else:
                     
-                    pdf_ready.answered = False
+                    pdf_ready['answered'] = False
                 if 'prompt' in status:
                     questions = status['prompt']
                 if 'answer' in status:
@@ -299,9 +301,9 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg,statistic) -> None:
             
             if 'job_type' in status and status['job_type'] == 'pdf_summarize':
                 if 'status' in status and status['status'] == 'finished':
-                    pdf_ready.answered = True
+                    pdf_ready['answered'] = True
                 else:
-                    pdf_ready.answered = False
+                    pdf_ready['answered'] = False
                 if 'answer' in status:
                     answers = status['answer']
             i_q = 0
@@ -346,15 +348,17 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg,statistic) -> None:
                 ui.spinner(size='3rem').classes('self-center')
             if context.get_client().has_socket_connection:
                 ui.run_javascript('window.scrollTo(0, document.body.scrollHeight)')
+            app.storage.user['pdf_ready'] = pdf_ready
 
         def delete_chat() -> None:
             assign_uuid_if_missing()
             jobStat.removeJob(app.storage.browser['id'],app.storage.user['pdf_job'])
             app.storage.user['pdf_question'] = ""
             app.storage.user['pdf_job'] = uuid4()
-            pdf_ready.ready = False
-            pdf_ready.answered = False
-            pdf_ready.ready_to_upload = True
+            pdf_ready['ready'] = False
+            pdf_ready['answered'] = False
+            pdf_ready['ready_to_upload'] = True
+            app.storage.user['pdf_ready'] = pdf_ready
             pdf_messages.refresh()
 
         def copy_data():
@@ -409,11 +413,11 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg,statistic) -> None:
             job = {'token':app.storage.browser['id'],'uuid':app.storage.user['pdf_job'],'filepath':filepath}
             try:
                 taskQueue.put(job)
-                pdf_ready.ready = False
-                pdf_ready.answered = False
+                pdf_ready['ready'] = False
+                pdf_ready['answered'] = False
             except:
                 jobStat.updateStatus(app.storage.browser['id'],app.storage.user['pdf_job'],"failed") 
-            pdf_ready.ready_to_upload = False
+            pdf_ready['ready_to_upload'] = False
             timer.activate()
             pdf_messages.refresh()
 
