@@ -20,6 +20,6 @@ def assign_uuid_if_missing(app):
     if not 'chain_job' in app.storage.user or not app.storage.user['chain_job']:
         app.storage.user['chain_job'] = uuid4()
     if not 'pdf_ready' in app.storage.user or not app.storage.user['pdf_ready']:
-        app.storage.user['pdf_ready']=PDFReady()
+        app.storage.user['pdf_ready']= {'ready':False,'answered':False,'ready_to_upload':True}
     if not 'chain_ready' in app.storage.user or not app.storage.user['chain_ready']:
-        app.storage.user['chain_ready']=ChainReady()
+        app.storage.user['chain_ready']={'ready':False,'answered':False,'ready_to_upload':True}
