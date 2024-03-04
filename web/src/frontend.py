@@ -10,33 +10,12 @@ from uuid import uuid4
 from pages.common_tools import assign_uuid_if_missing
 from pages.chain_editor import chain_editor
 
+#REMOVE?
 class InputText:
     def __init__(self):
         self.text = ""
-
+#REMOVE?
 inputText = InputText()
-
-class PDFReady:
-    def __init__(self):
-        self.ready = False
-        self.answered = False
-        self.ready_to_upload = True
-
-class ChainReady:
-    def __init__(self):
-        self.ready = False
-        self.answered = False
-        self.ready_to_upload = True
-
-#MOVE TO EXTRA FILE
-def assign_uuid_if_missing():
-    if not 'chat_job' in app.storage.user or not app.storage.user['chat_job']:
-        app.storage.user['chat_job'] = uuid4()
-    if not 'pdf_job' in app.storage.user or not app.storage.user['pdf_job']:
-        app.storage.user['pdf_job'] = uuid4()
-    if not 'pdf_ready' in app.storage.user or not app.storage.user['pdf_ready']:
-        app.storage.user['pdf_ready']=PDFReady()
-#MOVE TO EXTRA FILE
 
 def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg,statistic) -> None:
     assi = os.getenv('ASSISTANT',default=cfg.get_config('frontend','assistant',default="Assistent:in"))
@@ -246,7 +225,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg,statistic) -> None:
         statistic.addEvent('visit')
         title = os.getenv('APP_TITLE',default=cfg.get_config('frontend','app_title',default="MWICHT"))
         with ui.image('/app/static/home_background.jpeg').classes('transparent fill'):
-            ui.label(title).classes('absolute-top text-center transparent')ambda: ui.open(pdfpage, new_tab=False))
+            ui.label(title).classes('absolute-top text-center transparent')
 
     @ui.page('/editor')
     def editor():

@@ -157,7 +157,7 @@ class chainProzessor():
     
     def long_prompt_handler(self,prompt,input):
         #TODO: Find way to make sure, that prompt and input allways fit
-               snippet_tokens = len(self.llm.tokenize(text.encode(encoding = 'UTF-8', errors = 'strict')))
+        snippet_tokens = len(self.llm.tokenize(text.encode(encoding = 'UTF-8', errors = 'strict')))
         if snippet_tokens > int(os.getenv('NUMBER_OF_TOKENS_PDF',default=self.cfg.get_config('model','number_of_tokens_pdf',default=3800))):
             snips = self.seperate_into_list(prompt)
             snip1 = snips[:len(snips)/2]
