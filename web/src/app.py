@@ -1,4 +1,4 @@
-from llm import build_llm
+from llm import build_llm, chainProzessor
 from config import config
 import requests
 import json
@@ -33,7 +33,7 @@ class jobStatus():
     def __init__(self):
         self.jobsByToken = {}
         self.pdfProcByToken = {}
-
+        self.chainProc = {}
 
     def addPDFProc(self,token,uuid,pdfproc):
         if token in self.pdfProcByToken:
@@ -44,6 +44,14 @@ class jobStatus():
     def getPDFProc(self,token,uuid):
         if token in self.pdfProcByToken and uuid in self.pdfProcByToken[token]: 
             return self.pdfProcByToken[token][uuid]
+        return False
+
+    def addChainProc(self,id,chainproc):
+        self.chainProc[id] = chainproc
+
+    def getChainProc(self,id):
+        if id in self.chainProc:
+            return self.chainProc[id]
         return False
 
     def addJob(self,token,uuid,prompt,custom_config = False, job_type = 'chat'):
@@ -106,6 +114,19 @@ class jobStatus():
                         self.jobsByToken[token][uuid]['answer'] = [answer]
                     return True
             return False
+        except:
+            return False
+
+    def getLastAnswer(self,token,uuid):
+        try:
+            if token in self.jobsByToken:
+                if uuid in self.jobsByToken[token]:
+                    if 'answer' in self.jobsByToken[token][uuid]:
+                        answer = self.jobsByToken[token][uuid]['answer']
+                        if isinstance(answer, list):
+                            return answer[-1]
+                        else:
+                            return answer
         except:
             return False
 
@@ -241,46 +262,56 @@ class MainProcessor (threading.Thread):
                         if not summarizer.run():
                             print('putting summarizer again')
                             self.taskQueue.put({'token':job['token'],'uuid':job['uuid'],'summarizer':summarizer})
-
                     else:
-
-                        prompts = item['prompt']
-                        answers = []
-                        if 'answer' in item:
-                            answers = item['answer']
-            
-                        i_p = 0
-                        i_a = 0
-                        instruction = ""
-                        while i_p < len(prompts):
-                            instruction += "USER:  " + prompts[i_p]
-                            if i_a < len(answers):
-                                instruction += "ASSISTANT:  " + answers[i_a]
-                            i_p += 1
-                            i_a += 1
-            
-                        if len(instruction) >= 20000:
-                            instruction = instruction[-20000:]
-                        chatprompt = os.getenv('CHATPROMPT',default=cfg.get_config('model','chatprompt',default="Du bist ein hilfreicher Assistent."))
-                        prompt = f"{chatprompt} {instruction} ASSISTANT:"
-            
-                        response = ""
-                        self.jobStat.addAnswer(job['token'],job['uuid'],response)
-                        try:
-                            if item['custom_config']:
-                                answer = llm(prompt, stream=True, temperature = item['custom_config']['temperature'], max_tokens = item['custom_config']['max_tokens'], top_k=item['custom_config']['top_k'], top_p=item['custom_config']['top_p'],repeat_penalty=item['custom_config']['repeat_penalty'])
+                        if 'job_type' in item and item['job_type'] == 'compile_chain':
+                            if 'meta_chain' in job:
+                                meta_chain = job['meta_chain']
+                                create_callback = lambda x : self.jobStat.addAnswer(job['token'],job['uuid'],x)
+                                update_callback = lambda x : self.jobStat.updateAnswer(job['token'],job['uuid'],x)
+                                status_callback = lambda x : self.jobStat.updateStatus(job['token'],job['uuid'],x)
+                                cP = chainProzessor(llm,create_callback,update_callback,status_callback,cfg,meta_chain)
+                                self.jobStat.addChainProc(meta_chain['chain_id'],cP)
                             else:
-                                answer = llm(prompt, stream=True, temperature = 0.7, max_tokens = 1024, top_k=20, top_p=0.9,repeat_penalty=1.15)
+                                print('No chain')
+                        else:
+
+                            prompts = item['prompt']
+                            answers = []
+                            if 'answer' in item:
+                                answers = item['answer']
+            
+                            i_p = 0
+                            i_a = 0
+                            instruction = ""
+                            while i_p < len(prompts):
+                                instruction += "USER:  " + prompts[i_p]
+                                if i_a < len(answers):
+                                    instruction += "ASSISTANT:  " + answers[i_a]
+                                i_p += 1
+                                i_a += 1
+            
+                            if len(instruction) >= 20000:
+                                instruction = instruction[-20000:]
+                            chatprompt = os.getenv('CHATPROMPT',default=cfg.get_config('model','chatprompt',default="Du bist ein hilfreicher Assistent."))
+                            prompt = f"{chatprompt} {instruction} ASSISTANT:"
+            
+                            response = ""
+                            self.jobStat.addAnswer(job['token'],job['uuid'],response)
+                            try:
+                                if item['custom_config']:
+                                    answer = llm(prompt, stream=True, temperature = item['custom_config']['temperature'], max_tokens = item['custom_config']['max_tokens'], top_k=item['custom_config']['top_k'], top_p=item['custom_config']['top_p'],repeat_penalty=item['custom_config']['repeat_penalty'])
+                                else:
+                                    answer = llm(prompt, stream=True, temperature = 0.7, max_tokens = 1024, top_k=20, top_p=0.9,repeat_penalty=1.15)
                 
-                            for answ in answer:
-                                res = answ['choices'][0]['text'] 
-                                response += res
-                                if not self.jobStat.updateAnswer(job['token'],job['uuid'],response):
-                                    break
-                        except:
-                            response = "An Error occured."
-                        self.jobStat.updateAnswer(job['token'],job['uuid'],response)            
-                        self.jobStat.updateStatus(job['token'],job['uuid'],"finished")
+                                for answ in answer:
+                                    res = answ['choices'][0]['text'] 
+                                    response += res
+                                    if not self.jobStat.updateAnswer(job['token'],job['uuid'],response):
+                                        break
+                            except:
+                                response = "An Error occured."
+                            self.jobStat.updateAnswer(job['token'],job['uuid'],response)            
+                            self.jobStat.updateStatus(job['token'],job['uuid'],"finished")
 
 
 
