@@ -29,7 +29,7 @@ def build_llm(cfg):
         download_file(url,filename)
         print("Download complete.")
     try:
-        llm = Llama(model_path=filename,n_ctx=ntokens, n_batch=128,verbose=verbose,n_gpu_layers=int(layers),n_threads=multiprocessing.cpu_count())
+        llm = Llama(model_path=filename,n_ctx=ntokens, n_batch=128,verbose=verbose,n_gpu_layers=int(layers),n_threads=multiprocessing.cpu_count(), n_threads_batch=multiprocessing.cpu_count())
     except:
         llm = Llama(model_path=filename,n_ctx=ntokens, n_batch=128,verbose=verbose,n_gpu_layers=int(layers)) #verbose = False leads to error
     return llm
