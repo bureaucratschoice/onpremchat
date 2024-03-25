@@ -127,7 +127,10 @@ class chainProzessor():
 
     def seperate_into_list(self,text):
         if isinstance(text,list):
-            return text
+            ntext = []
+            for item in text:
+                ntext = ntext + self.seperate_into_list(item)
+            return ntext
         if '\n\n' in text:
             text = text.split("\n\n")
             text = [i for i in text if i]
@@ -155,19 +158,33 @@ class chainProzessor():
             else:
                 self.final_output = [item]
     
-    def long_prompt_handler(self,prompt,input):
+    def long_input_handler(self,input):
         #TODO: Find way to make sure, that prompt and input allways fit
-        snippet_tokens = len(self.llm.tokenize(text.encode(encoding = 'UTF-8', errors = 'strict')))
-        if snippet_tokens > int(os.getenv('NUMBER_OF_TOKENS_PDF',default=self.cfg.get_config('model','number_of_tokens_pdf',default=3800))):
-            snips = self.seperate_into_list(prompt)
-            snip1 = snips[:len(snips)/2]
-            snip2 = snips[len(snips)/2+1]
+        snippet_tokens = len(self.llm.tokenize(input.encode(encoding = 'UTF-8', errors = 'strict')))
+        allowed_len = int(os.getenv('NUMBER_OF_TOKENS_PDF',default=self.cfg.get_config('model','number_of_tokens_pdf',default=3800)))
+        output = []
+        if snippet_tokens > allowed_len:
+            snips = self.seperate_into_list(input)
+            if len(snips) > 1:
+                snip1 = []
+                for item in snips[:len(snips)/2]:
+                    snip1.append(item)
+
+                output = output + self.long_input_handler(snip1)
+                for item in snips[len(snips)/2+1]:
+                    snip2.append(item)
+                output = output + self.long_input_handler(snip2)
+        else:
+            output.append(input)
+        print(output)
+        return output
 
     def run(self,initialprompt = ""):
         #TODO: Handling input longer than window
         i = self.i
         appended_to_final = False
         last_content = ""
+        output = []
         if self.current_summarizer:
             if self.current_summarizer.run():
                 self.i += 1
@@ -195,18 +212,19 @@ class chainProzessor():
                 self.i = 0
                 i = 0
             if i == 0:
-                if initialprompt:
-                    prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}. EINGABE:{initialprompt}. "
-                else:
-                    prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}"
-
                 if 'pdf_action' in chain_elem and 'pdf_proc' in chain_elem and chain_elem['pdf_action'] == 'Frage beantworten':
                     pdf_proc = chain_elem['pdf_proc']
-                    output = pdf_proc.askPDF(chain_elem['instruction'])
+                    output = output + pdf_proc.askPDF(chain_elem['instruction'])
                         
                 else:
-                    
-                    output = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()
+                    if initialprompt:
+                        for inst in self.long_input_handler(chain_elem['instruction']):
+                            prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}. EINGABE:{initialprompt}. "
+                            output = output + self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()
+                    else:
+                        for inst in self.long_input_handler(chain_elem['instruction']):
+                            prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}"
+                            output = output + self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()
                 if chain_elem['action'] == 3:
                     output = self.seperate_into_list(output)
                 self.i = 1
@@ -230,11 +248,12 @@ class chainProzessor():
                                     pdf_proc = chain_elem['pdf_proc']
                                     newresult = pdf_proc.askPDF(item)
                                 else:
-                                    prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}. EINGABE:{item}. "
-                                    print("PROMPT: " + str(prompt))
-                                    newresult = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()
-                                    print("OUTPUT: " + str(newresult))
-                                newoutput.append(newresult)
+                                    for elem in self.long_input_handler(item):
+                                        prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}. EINGABE:{elem}. "
+                                        print("PROMPT: " + str(prompt))
+                                        newresult = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()
+                                        print("OUTPUT: " + str(newresult))
+                                        newoutput.append(newresult)
                     if chain_elem['action'] == 2: #reduce list to one #Handling ask PDF from here
                         
                         fulltext = ""
@@ -246,9 +265,10 @@ class chainProzessor():
                             pdf_proc = chain_elem['pdf_proc']
                             newoutput = pdf_proc.askPDF(fulltext)
                         else:
-                            prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}. EINGABE:{fulltext}. "
-                            print("PROMPT: " + str(prompt))
-                            newoutput = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()
+                            for elem in self.long_input_handler(fulltext):
+                                prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}. EINGABE:{elem}. "
+                                print("PROMPT: " + str(prompt))
+                                newoutput.append(self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip())
                         print("OUTPUT: " + str(newoutput))
 
                 else:
@@ -258,9 +278,10 @@ class chainProzessor():
                             pdf_proc = chain_elem['pdf_proc']
                             newoutput = pdf_proc.askPDF(output)
                         else:
-                            prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}. EINGABE:{output}. "
-                            print("PROMPT: " + str(prompt))
-                            newoutput = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()
+                            for elem in self.long_input_handler(output):
+                                prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}. EINGABE:{elem}. "
+                                print("PROMPT: " + str(prompt))
+                                newoutput.append(self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip())
                         print("OUTPUT: " + str(newoutput))
                     else: #expand
                         print("Expand without list ")
@@ -268,9 +289,10 @@ class chainProzessor():
                             pdf_proc = chain_elem['pdf_proc']
                             newoutput = pdf_proc.askPDF(output)
                         else:
-                            prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}. EINGABE:{output}. "
-                            print("PROMPT: " + str(prompt))
-                            newoutput = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()    
+                            for elem in self.long_input_handler(output):
+                                prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}. EINGABE:{elem}. "
+                                print("PROMPT: " + str(prompt))
+                                newoutput.append(self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip())  
                         print("OUTPUT: " + str(newoutput))
                         newoutput = self.seperate_into_list(newoutput)
                   
