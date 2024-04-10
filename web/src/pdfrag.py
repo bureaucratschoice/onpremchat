@@ -15,6 +15,11 @@ from llama_index.query_engine import RetrieverQueryEngine
 import os
 import shutil
 
+
+
+
+        
+
 class OwnRetriever(BaseRetriever):
     """Retriever over a simple vector store."""
 
@@ -85,11 +90,13 @@ class OwnRetriever(BaseRetriever):
         return nodes_with_scores
 
 class PDF_Processor():
-    def __init__(self, cfg,llm):
+    def __init__(self, cfg, llm):
 
         self.embed_model = HuggingFaceEmbedding()
 
+        
         self.llm = llm
+
         
         '''LlamaCPP(
         # You can pass in the URL to a GGML model to download it automatically
