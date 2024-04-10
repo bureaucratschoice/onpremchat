@@ -85,11 +85,13 @@ class OwnRetriever(BaseRetriever):
         return nodes_with_scores
 
 class PDF_Processor():
-    def __init__(self, cfg):
+    def __init__(self, cfg,llm):
 
         self.embed_model = HuggingFaceEmbedding()
 
-        self.llm = LlamaCPP(
+        self.llm = llm
+        
+        '''LlamaCPP(
         # You can pass in the URL to a GGML model to download it automatically
         # optionally, you can set the path to a pre-downloaded model instead of model_url
         model_path=os.getenv('MODEL_BIN_PATH',default=cfg.get_config('model','model_bin_path',default="/models/em_german_leo_mistral.Q5_K_S.gguf")),
@@ -104,6 +106,7 @@ class PDF_Processor():
         model_kwargs={"n_gpu_layers": int(os.getenv('GPU_LAYERS',default=cfg.get_config('model','gpu_layers',default=0)))},
         verbose=True,
         )
+        '''
 
         self.service_context = ServiceContext.from_defaults(
         llm=self.llm, embed_model=self.embed_model
