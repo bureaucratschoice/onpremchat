@@ -20,13 +20,13 @@ Version 0.5.1 is current latest. With this version, users can set custom llm par
 * go into the new directory onpremchat
 
 ## CPU only
-* docker-compose up - if you don't have docker-compose see below.
+* docker compose up - if you don't have docker-compose see below.
 * By default, service is available under localhost:8000.
 * A frontend to chat with the llm is available under localhost:8000/chat
 * To learn about the api and try things out, connect to localhost:8000/docs
 
 ## GPU support
-* docker-compose -f docker-compose_gpu.yml up
+* docker compose -f docker-compose_gpu.yml up
 
 # How to configure it?
 
