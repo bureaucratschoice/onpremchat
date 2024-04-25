@@ -15,6 +15,11 @@ from llama_index.query_engine import RetrieverQueryEngine
 import os
 import shutil
 
+
+
+
+        
+
 class OwnRetriever(BaseRetriever):
     """Retriever over a simple vector store."""
 
@@ -85,6 +90,7 @@ class OwnRetriever(BaseRetriever):
         return nodes_with_scores
 
 class PDF_Processor():
+
     def __init__(self, cfg, llm = False):
 
         self.embed_model = HuggingFaceEmbedding()

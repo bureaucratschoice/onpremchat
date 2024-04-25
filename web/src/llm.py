@@ -4,11 +4,15 @@ import box
 import yaml
 import requests
 import os
+
 from pdfrag import PDF_Processor
 import pdftools
 from llama_index.llms import LlamaCPP # FOR PDF
 
 grammar = LlamaGrammar.from_file("list.gbnf")
+
+import multiprocessing
+
 
 def download_file(url, filename):
     local_filename = filename
@@ -29,7 +33,10 @@ def build_llm(cfg):
         print("Specified Model not found. Downloading Model...")
         download_file(url,filename)
         print("Download complete.")
-    llm = Llama(model_path=filename,n_ctx=ntokens, n_batch=128,verbose=verbose,n_gpu_layers=int(layers)) #verbose = False leads to error
+    try:
+        llm = Llama(model_path=filename,n_ctx=ntokens, n_batch=128,verbose=verbose,n_gpu_layers=int(layers),n_threads=multiprocessing.cpu_count(), n_threads_batch=multiprocessing.cpu_count())
+    except:
+        llm = Llama(model_path=filename,n_ctx=ntokens, n_batch=128,verbose=verbose,n_gpu_layers=int(layers)) #verbose = False leads to error
     return llm
 
 class summarizerOutput():

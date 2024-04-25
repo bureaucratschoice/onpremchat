@@ -1,8 +1,10 @@
 # News
+Version 0.7 is current latest. It comes with a better gui, a config file, RAG and summarizing for PDF and fixes for RAG with GPU.
+
 Version 0.5.1 is current latest. With this version, users can set custom llm parameters via the user interface.
 
 # What it does? 
-* With this repo you get a container which offers a rest api to a local hosted llama based llm. No GPU required but you can use it with GPU support, if you have a GPU available.
+* With this repo you get a container which offers a local hosted llama based llm with gui access. No GPU required but you can use it with GPU support, if you have a GPU available.
 * Models are downloaded on first time of usage and stored in an external mount.
 * Chat history is held in memory only.
 
@@ -18,13 +20,13 @@ Version 0.5.1 is current latest. With this version, users can set custom llm par
 * go into the new directory onpremchat
 
 ## CPU only
-* docker-compose up - if you don't have docker-compose see below.
+* docker compose up - if you don't have docker-compose see below.
 * By default, service is available under localhost:8000.
 * A frontend to chat with the llm is available under localhost:8000/chat
 * To learn about the api and try things out, connect to localhost:8000/docs
 
 ## GPU support
-* docker-compose -f docker-compose_gpu.yml up
+* docker compose -f docker-compose_gpu.yml up
 
 # How to configure it?
 

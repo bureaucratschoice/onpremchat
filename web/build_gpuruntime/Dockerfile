@@ -24,7 +24,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 #ENV FORCE_CMAKE=1 
 #RUN CMAKE_ARGS="-DLLAMA_CUBLAS=ON" FORCE_CMAKE=1 pip install --upgrade --force-reinstall llama-cpp-python --no-cache-dir
 RUN CUDACXX=/usr/local/cuda-12/bin/nvcc CMAKE_ARGS="-DLLAMA_CUBLAS=on -DCMAKE_CUDA_ARCHITECTURES=all-major" FORCE_CMAKE=1 \
-    pip install llama-cpp-python --no-cache-dir --force-reinstall --upgrade
+    pip install "llama-cpp-python==0.2.57" --no-cache-dir --force-reinstall --upgrade
 EXPOSE 80
 
 ENV PYTHONDONTWRITEBYTECODE=1
