@@ -154,6 +154,7 @@ class chainProzessor():
         return text
 
     def append_to_final_list(self,item):
+        print("APPEND: " + str(item))
         if self.final_output:
             if isinstance(item, list):
                 self.final_output += item
