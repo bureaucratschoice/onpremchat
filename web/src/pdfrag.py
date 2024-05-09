@@ -198,7 +198,7 @@ class PDF_Processor():
         if remove_orig:
             self.remove(filepath)
 
-    def askPDF(self,question):
+    def askPDF(self,question,stream = True):
         retriever = OwnRetriever(
             self.vector_store, self.embed_model, self.nodes, query_mode="default", similarity_top_k=1
         )
@@ -207,7 +207,9 @@ class PDF_Processor():
         )
         response = query_engine.query(question,)
         self.last_response = response
-        return response.response_gen
+        if stream:
+            return response.response_gen
+        return response
 
     def getTopSimilar(self,question,top_k=1):
         retriever = OwnRetriever(

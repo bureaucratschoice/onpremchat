@@ -153,7 +153,7 @@ class jobStatus():
         try:
             if token in self.jobsByToken:
                 if uuid in self.jobsByToken[token]:
-                    if 'answer' in self.jobsByToken[token][uuid] and self.jobsByToken[token][uuid]['answer'] :
+                    if 'answer' in self.jobsByToken[token][uuid] and self.jobsByToken[token][uuid]['answer']:
                         self.jobsByToken[token][uuid]['answer'][-1] = answer
                     else:
                         self.jobsByToken[token][uuid]['answer'] = [answer]
@@ -290,6 +290,9 @@ class MainProcessor (threading.Thread):
                                 status_callback = lambda x : self.jobStat.updateStatus(job['token'],job['uuid'],x)
                                 cP = chainProzessor(llm,create_callback,update_callback,status_callback,cfg,meta_chain)
                                 self.jobStat.addChainProc(meta_chain['chain_id'],cP)
+                                while not cP.run(): #TODO: Look for better way'
+                                    a = 0
+                                
                             else:
                                 print('No chain')
                         else:

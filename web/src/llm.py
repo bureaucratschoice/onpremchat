@@ -126,6 +126,7 @@ class chainProzessor():
             chain_elem['output'] = item['output']
             chain_elem['restart'] = item['restart']
             self.chain.append(chain_elem)
+
         self.chain_gen = self.__create_chain_gen__()
         #self.run()
     def __create_chain_gen__(self):
@@ -149,12 +150,11 @@ class chainProzessor():
                 if ',' in text:
                     text = text.split(",")
                     text = [i for i in text if i]
-                else:
-                    text = [text[:len(text)/2],text[len(text)/2+1:]]
+                    text = text
         return text
 
     def append_to_final_list(self,item):
-        print("APPEND: " + str(item))
+        
         if self.final_output:
             if isinstance(item, list):
                 self.final_output += item
@@ -165,10 +165,18 @@ class chainProzessor():
                 self.final_output = item
             else:
                 self.final_output = [item]
+        print("APPENDEND: " + str(self.final_output))
     
     def long_input_handler(self,input):
         #TODO: Find way to make sure, that prompt and input allways fit
-        snippet_tokens = len(self.llm.tokenize(input.encode(encoding = 'UTF-8', errors = 'strict')))
+        snippent_tokens = 0
+        if getattr(input, "encode", False):
+            snippet_tokens = len(self.llm.tokenize(input.encode(encoding = 'UTF-8', errors = 'strict')))
+        else:
+            try:
+                snippet_tokens = len(self.llm.tokenize(input))
+            except:
+                snippent_tokens = 0
         allowed_len = int(os.getenv('NUMBER_OF_TOKENS_PDF',default=self.cfg.get_config('model','number_of_tokens_pdf',default=3800)))
         output = []
         if snippet_tokens > allowed_len:
@@ -184,7 +192,7 @@ class chainProzessor():
                 output = output + self.long_input_handler(snip2)
         else:
             output.append(input)
-        print(output)
+        
         return output
 
     def run(self,initialprompt = ""):
@@ -192,7 +200,8 @@ class chainProzessor():
         i = self.i
         appended_to_final = False
         last_content = ""
-        output = []
+        output = ""
+        
         if self.current_summarizer:
             if self.current_summarizer.run():
                 self.i += 1
@@ -206,7 +215,7 @@ class chainProzessor():
             else:    
                 return False
         for chain_elem in self.chain_gen:
-            self.create_callback(str(output))
+            #self.create_callback(str(output))
             print("CHAINSTEP " + str(i))
             if 'pdf_action' in chain_elem and 'pdf_proc' in chain_elem:
                     pdf_proc = chain_elem['pdf_proc']
@@ -222,22 +231,35 @@ class chainProzessor():
             if i == 0:
                 if 'pdf_action' in chain_elem and 'pdf_proc' in chain_elem and chain_elem['pdf_action'] == 'Frage beantworten':
                     pdf_proc = chain_elem['pdf_proc']
-                    output = output + pdf_proc.askPDF(chain_elem['instruction'])
+                    output = pdf_proc.askPDF(chain_elem['instruction'],stream = False)
+                    metadatas = pdf_proc.getLastResponseMetaData()
+                    response = output + "(vgl. "
+                    for metadata in metadatas:
+                        source = metadata['source'] if 'source' in metadata else '?'
+                        name = metadata['file_path'] if 'file_path' in metadata else '?'
+                        if '/' in name:
+                            name = name.split('/')[-1]
+
+                        response = response + name +":"+str(source)
+                    response = response + ")"
+                    self.create_callback(str(response))
                         
                 else:
                     if initialprompt:
                         for inst in self.long_input_handler(chain_elem['instruction']):
-                            prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}. EINGABE:{initialprompt}. "
-                            output = output + self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()
+                            prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {inst}. EINGABE:{initialprompt}. "
+                            inBetween = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()
+                            self.create_callback(str(inBetween))
+                            output = output + inBetween
                     else:
                         for inst in self.long_input_handler(chain_elem['instruction']):
-                            prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}"
-                            output = output + self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()
+                            prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {inst}"
+                            inBetween = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()
+                            self.create_callback(str(inBetween))
+                            output = output + inBetween
                 if chain_elem['action'] == 3:
                     output = self.seperate_into_list(output)
                 self.i = 1
-                print("PROMPT: " + str(prompt))
-                print("OUTPUT: " + str(output))
                 self.last_output = output
                 if 'output' in chain_elem and chain_elem['output'] == True:
                     self.append_to_final_list(self.last_output)
@@ -254,14 +276,24 @@ class chainProzessor():
                                 item = str(item).strip()
                                 if 'pdf_action' in chain_elem and 'pdf_proc' in chain_elem and chain_elem['pdf_action'] == 'Frage beantworten':
                                     pdf_proc = chain_elem['pdf_proc']
-                                    newresult = pdf_proc.askPDF(item)
+                                    newresult = pdf_proc.askPDF(item,stream = False)
+                                    metadatas = pdf_proc.getLastResponseMetaData()
+                                    response = newresult + "(vgl. "
+                                    for metadata in metadatas:
+                                        source = metadata['source'] if 'source' in metadata else '?'
+                                        name = metadata['file_path'] if 'file_path' in metadata else '?'
+                                        if '/' in name:
+                                            name = name.split('/')[-1]
+
+                                        response = response + name +":"+str(source)
+                                    response = response + ")"                                    
+                                    self.create_callback(str(response))
                                 else:
                                     for elem in self.long_input_handler(item):
                                         prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}. EINGABE:{elem}. "
-                                        print("PROMPT: " + str(prompt))
                                         newresult = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()
-                                        print("OUTPUT: " + str(newresult))
                                         newoutput.append(newresult)
+                                        self.create_callback(str(newresult))
                     if chain_elem['action'] == 2: #reduce list to one #Handling ask PDF from here
                         
                         fulltext = ""
@@ -271,53 +303,94 @@ class chainProzessor():
                         print("Reduce List")
                         if 'pdf_action' in chain_elem and 'pdf_proc' in chain_elem and chain_elem['pdf_action'] == 'Frage beantworten':
                             pdf_proc = chain_elem['pdf_proc']
-                            newoutput = pdf_proc.askPDF(fulltext)
+                            newoutput = pdf_proc.askPDF(fulltext,stream = False)
+
+                            metadatas = pdf_proc.getLastResponseMetaData()
+                            response = newoutput + "(vgl. "
+                            for metadata in metadatas:
+                                source = metadata['source'] if 'source' in metadata else '?'
+                                name = metadata['file_path'] if 'file_path' in metadata else '?'
+                                if '/' in name:
+                                    name = name.split('/')[-1]
+
+                                    response = response + name +":"+str(source)
+                            response = response + ")"                                    
+                         
+                            self.create_callback(str(response))
                         else:
                             for elem in self.long_input_handler(fulltext):
                                 prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}. EINGABE:{elem}. "
-                                print("PROMPT: " + str(prompt))
-                                newoutput.append(self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip())
-                        print("OUTPUT: " + str(newoutput))
+                                inBetween = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()
+                                self.create_callback(str(inBetween))
+                                newoutput.append(inBetween) 
 
                 else:
                     if chain_elem['action'] == 1 or chain_elem['action'] == 2: #reduce is like map without list
                         print("Reduce or map without list ")
                         if 'pdf_action' in chain_elem and 'pdf_proc' in chain_elem and chain_elem['pdf_action'] == 'Frage beantworten':
                             pdf_proc = chain_elem['pdf_proc']
-                            newoutput = pdf_proc.askPDF(output)
+                            newoutput = pdf_proc.askPDF(output,stream = False)
+                            metadatas = pdf_proc.getLastResponseMetaData()
+                            response = newoutput + "(vgl. "
+                            for metadata in metadatas:
+                                source = metadata['source'] if 'source' in metadata else '?'
+                                name = metadata['file_path'] if 'file_path' in metadata else '?'
+                                if '/' in name:
+                                    name = name.split('/')[-1]
+
+                                    response = response + name +":"+str(source)
+                            response = response + ")"                                    
+                         
+                            self.create_callback(str(response))                            
+
                         else:
                             for elem in self.long_input_handler(output):
                                 prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}. EINGABE:{elem}. "
-                                print("PROMPT: " + str(prompt))
-                                newoutput.append(self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip())
-                        print("OUTPUT: " + str(newoutput))
+
+                                inBetween = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()
+                                self.create_callback(str(inBetween))
+                                newoutput.append(inBetween) 
                     else: #expand
                         print("Expand without list ")
                         if 'pdf_action' in chain_elem and 'pdf_proc' in chain_elem and chain_elem['pdf_action'] == 'Frage beantworten':
                             pdf_proc = chain_elem['pdf_proc']
-                            newoutput = pdf_proc.askPDF(output)
+                            newoutput = pdf_proc.askPDF(output,stream = False)
+                            metadatas = pdf_proc.getLastResponseMetaData()
+                            response = newoutput + "(vgl. "
+                            for metadata in metadatas:
+                                source = metadata['source'] if 'source' in metadata else '?'
+                                name = metadata['file_path'] if 'file_path' in metadata else '?'
+                                if '/' in name:
+                                    name = name.split('/')[-1]
+
+                                    response = response + name +":"+str(source)
+                            response = response + ")"                                    
+                         
+                            self.create_callback(str(response))
+
                         else:
                             for elem in self.long_input_handler(output):
                                 prompt = f"Du bist ein hilfreicher Assistent. AUFTRAG: {chain_elem['instruction']}. EINGABE:{elem}. "
-                                print("PROMPT: " + str(prompt))
-                                newoutput.append(self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip())  
-                        print("OUTPUT: " + str(newoutput))
+                                inBetween = self.llm(prompt, temperature = 0.7, max_tokens = 4096, top_k=20, top_p=0.9,repeat_penalty=1.15)['choices'][0]['text'].strip()
+                                self.create_callback(str(inBetween))
+                                newoutput.append(inBetween)  
                         newoutput = self.seperate_into_list(newoutput)
                   
                 self.last_output = newoutput
+                
                 if 'output' in chain_elem and chain_elem['output'] == True:
                     self.append_to_final_list(self.last_output)
                     appended_to_final = True
             self.i += 1
-            self.update_callback(str(last_output))
+            
             return False
 
-        print(self.last_output)
         self.status_callback("finished")
         self.chain_gen = self.__create_chain_gen__()
         self.i = 0
         if not appended_to_final:
             self.append_to_final_list(self.last_output)
+        
         self.last_output = []
 
         return self.final_output
