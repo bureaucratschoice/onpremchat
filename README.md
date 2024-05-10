@@ -1,7 +1,8 @@
 # News
+Latest version now with authentication for new /management page: user:mngmt pass:Supertoken.
+Use /management page to upload custom logo and background images for / in .jpeg format.
 
 Since version 0.7, config via a config file, RAG and summarizing for PDF are supported.
-
 
 # What it does? 
 * With this repo you get a container which offers a local hosted llama based llm with gui access. No GPU required but you can use it with GPU support, if you have a GPU available.
