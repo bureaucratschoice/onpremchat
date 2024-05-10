@@ -278,8 +278,8 @@ class MainProcessor (threading.Thread):
                             i_p += 1
                             i_a += 1
             
-                        if len(instruction) >= 20000:
-                            instruction = instruction[-20000:]
+                        if len(instruction) >= 14000:
+                            instruction = instruction[-14000:]
                         chatprompt = os.getenv('CHATPROMPT',default=cfg.get_config('model','chatprompt',default="Du bist ein hilfreicher Assistent."))
                         prompt = f"{chatprompt} {instruction} ASSISTANT:"
             

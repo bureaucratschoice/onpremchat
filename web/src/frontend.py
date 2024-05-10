@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
-from nicegui import app,context, ui, events
+from nicegui import app,context, ui, events, Client
 from datetime import datetime
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import RedirectResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 import os
 import time
 from uuid import uuid4
 import json
+
 
 class InputText:
     def __init__(self):
@@ -30,6 +33,26 @@ def assign_uuid_if_missing():
     if not 'pdf_ready' in app.storage.user or not app.storage.user['pdf_ready']:
         app.storage.user['pdf_ready']= {'ready':False,'answered':False,'ready_to_upload':True}
 
+
+'''Authentication for management tasks via SUPERTOKEN'''
+passwords = {'mngmt': os.getenv('SUPERTOKEN',default="PLEASE_CHANGE_THIS_PLEASE")}
+
+unrestricted_page_routes = {'/login','/','/chat','/pdf'}
+
+
+class AuthMiddleware(BaseHTTPMiddleware):
+
+    async def dispatch(self, request: Request, call_next):
+        if not app.storage.user.get('authenticated', False):
+            if request.url.path in Client.page_routes.values() and request.url.path not in unrestricted_page_routes:
+                app.storage.user['referrer_path'] = request.url.path  # remember where the user wanted to go
+                return RedirectResponse('/login')
+        return await call_next(request)
+
+
+app.add_middleware(AuthMiddleware)
+'''End of Authentication'''
+
 def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg,statistic) -> None:
     assi = os.getenv('ASSISTANT',default=cfg.get_config('frontend','assistant',default="Assistent:in"))
     you = os.getenv('YOU',default=cfg.get_config('frontend','you',default="Sie"))
@@ -43,14 +66,24 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg,statistic) -> None:
         title = os.getenv('APP_TITLE',default=cfg.get_config('frontend','app_title',default="MWICHT"))
         ui.page_title(title)
         with ui.header().classes(replace='row items-center') as header:
-            ui.button(on_click=lambda: left_drawer.toggle(), icon='menu').props('flat color=white')
+            
+            
+            with ui.row():
 
+                    ui.button(on_click=lambda: left_drawer.toggle(), icon='menu').props('flat color=white')
+                    
+
+
+                    
+                    
+                    
         with ui.left_drawer().classes('bg-blue-100') as left_drawer:
             ui.link("Home",home)
             tochat = os.getenv('TOCHAT',default=cfg.get_config('frontend','to_chat',default="Zum Chat"))
             ui.link(tochat, show)
             topdf = os.getenv('TOPDF',default=cfg.get_config('frontend','to_pdf',default="Zu den PDF-Werkzeugen"))
             ui.link(topdf, pdfpage)
+        ui.image('/app/static/logo.jpeg').classes('w-32 h-16 absolute-right')
     @ui.page('/chat')
     
     def show():
@@ -166,7 +199,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg,statistic) -> None:
         # the queries below are used to expand the contend down to the footer (content can then use flex-grow to expand)
         ui.query('.q-page').classes('flex')
         ui.query('.nicegui-content').classes('w-full')
-
+        
         with ui.tabs().classes('w-full') as tabs:
             chat_tab = ui.tab('Chat')
 
@@ -236,15 +269,63 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg,statistic) -> None:
         navigation()
         statistic.addEvent('visit')
         title = os.getenv('APP_TITLE',default=cfg.get_config('frontend','app_title',default="MWICHT"))
-        with ui.image('/app/static/home_background.jpeg').classes('transparent fill'):
-            ui.label(title).classes('absolute-top text-center transparent')
+        
+        with ui.column().classes('absolute-center'):
+            with ui.row():
+                ui.image('/app/static/home_background1.jpeg').classes('transparent w-80 h-80')
+                ui.image('/app/static/home_background2.jpeg').classes('transparent w-80 h-80')
+            with ui.row():
+                ui.image('/app/static/home_background3.jpeg').classes('transparent w-80 h-80')
+                ui.image('/app/static/home_background4.jpeg').classes('transparent w-80 h-80')
+            
+
+    @ui.page('/management')
+    def mngmt():
+        navigation()
+        title = os.getenv('APP_TITLE',default=cfg.get_config('frontend','app_title',default="MWICHT"))
+        
+        
+        def handle_upload(event: events.UploadEventArguments):
+            assign_uuid_if_missing()
+            fileid = app.storage.browser['id']
+            with event.content as f:
+                
+                filepath = f'/app/static/{event.name}'
+                os.makedirs(os.path.dirname(filepath), exist_ok=True)
+                file = open(filepath, 'wb')
+                for line in f.readlines():
+                    file.write(line)
+                file.close()
+        ui.button(on_click=lambda: (app.storage.user.clear(), ui.navigate.to('/login')), icon='logout').props('outline round')
+        ui.markdown('You can upload **.jpeg** files here to customize the appearance of the application.')
+        ui.markdown('For the **logo** rename your upload logo.jpeg.')
+        ui.markdown('For the **background** images rename your upload home_background[1-4].jpeg')
+        ui.upload(on_upload=handle_upload,multiple=False,label='Upload JPEG',max_file_size=9048576).props('accept=.jpeg').classes('max-w-full')
+        
+
+    @ui.page('/login')
+    def login() -> Optional[RedirectResponse]:
+        def try_login() -> None:  # local function to avoid passing username and password as arguments
+            if passwords.get(username.value) == password.value:
+                app.storage.user.update({'username': username.value, 'authenticated': True})
+                ui.navigate.to(app.storage.user.get('referrer_path', '/'))  # go back to where the user wanted to go
+            else:
+                ui.notify('Wrong username or password', color='negative')
+
+        if app.storage.user.get('authenticated', False):
+            return RedirectResponse('/')
+        with ui.card().classes('absolute-center'):
+            username = ui.input('Username').on('keydown.enter', try_login)
+            password = ui.input('Password', password=True, password_toggle_button=True).on('keydown.enter', try_login)
+            ui.button('Log in', on_click=try_login)
+        return None
 
     @ui.page('/statistic')
     def statistics():
         navigation()
         title = os.getenv('APP_TITLE',default=cfg.get_config('frontend','app_title',default="MWICHT"))
         categories = ['visit','chat','pdf_question','pdf_summary','max_queue']
-        
+        ui.button(on_click=lambda: (app.storage.user.clear(), ui.navigate.to('/login')), icon='logout').props('outline round')
         for c in categories:
             
                 ui.label('CSS').style('color: #000').set_text(c)
