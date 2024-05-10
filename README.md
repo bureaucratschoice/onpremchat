@@ -1,7 +1,7 @@
 # News
-Version 0.7 is current latest. It comes with a better gui, a config file, RAG and summarizing for PDF and fixes for RAG with GPU.
 
-Version 0.5.1 is current latest. With this version, users can set custom llm parameters via the user interface.
+Since version 0.7, config via a config file, RAG and summarizing for PDF are supported.
+
 
 # What it does? 
 * With this repo you get a container which offers a local hosted llama based llm with gui access. No GPU required but you can use it with GPU support, if you have a GPU available.
