@@ -12,6 +12,7 @@ services:
     volumes:
       - ./models:/models
       - ./config:/config
+      - ./web/src/static:/app/static
     ports:
       - 8000:80
     deploy:
