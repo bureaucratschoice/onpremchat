@@ -70,8 +70,9 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg,statistic) -> None:
             
             with ui.row():
 
-                    ui.button(on_click=lambda: left_drawer.toggle(), icon='menu').props('flat color=white')
-                    
+                ui.button(on_click=lambda: left_drawer.toggle(), icon='menu').props('flat color=white')
+            with ui.row():
+                ui.image('/app/static/logo.jpeg').classes('w-64 h-32 absolute-right')
 
 
                     
@@ -83,7 +84,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg,statistic) -> None:
             ui.link(tochat, show)
             topdf = os.getenv('TOPDF',default=cfg.get_config('frontend','to_pdf',default="Zu den PDF-Werkzeugen"))
             ui.link(topdf, pdfpage)
-        ui.image('/app/static/logo.jpeg').classes('w-32 h-16 absolute-right')
+        
     @ui.page('/chat')
     
     def show():
@@ -272,11 +273,11 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg,statistic) -> None:
         
         with ui.column().classes('absolute-center'):
             with ui.row():
-                ui.image('/app/static/home_background1.jpeg').classes('transparent w-80 h-80')
-                ui.image('/app/static/home_background2.jpeg').classes('transparent w-80 h-80')
+                ui.image('/app/static/home_background1.jpeg').classes('w-60 h-60')
+                ui.image('/app/static/home_background2.jpeg').classes('w-60 h-60')
             with ui.row():
-                ui.image('/app/static/home_background3.jpeg').classes('transparent w-80 h-80')
-                ui.image('/app/static/home_background4.jpeg').classes('transparent w-80 h-80')
+                ui.image('/app/static/home_background3.jpeg').classes('w-60 h-60')
+                ui.image('/app/static/home_background4.jpeg').classes('w-60 h-60')
             
 
     @ui.page('/management')
