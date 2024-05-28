@@ -5,8 +5,8 @@ python-box==7.0.1
 python-dotenv==1.0.0
 sentence-transformers==2.2.2
 uvicorn==0.29.0
-llama-cpp-python==0.2.57
-nicegui==1.4.19
+llama-cpp-python==0.2.72
+nicegui==1.4.21
 llama_index==0.9.43
 sentencepiece==0.2.0
 llama-hub==0.0.79.post1

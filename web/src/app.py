@@ -209,7 +209,10 @@ class MainProcessor (threading.Thread):
                     if not pdfProc:
                         pdfProc = PDF_Processor(cfg,llm2)
                         self.jobStat.addPDFProc(job['token'],job['uuid'],pdfProc)
+                    #Old
                     pdfProc.processPDF(filepath)
+                    #New:
+                    #pdfProc.processDirectory(filepath)
                     self.jobStat.updateStatus(job['token'],job['uuid'],"finished")
 
             else:

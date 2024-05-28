@@ -97,23 +97,7 @@ class PDF_Processor():
         
         self.llm = llm
 
-        
-        '''LlamaCPP(
-        # You can pass in the URL to a GGML model to download it automatically
-        # optionally, you can set the path to a pre-downloaded model instead of model_url
-        model_path=os.getenv('MODEL_BIN_PATH',default=cfg.get_config('model','model_bin_path',default="/models/em_german_leo_mistral.Q5_K_S.gguf")),
-        temperature=0.1,
-        max_new_tokens=512,
-        # llama2 has a context window of 4096 tokens, but we set it lower to allow for some wiggle room
-        context_window=3900,
-        # kwargs to pass to __call__()
-        generate_kwargs={},
-        # kwargs to pass to __init__()
-        # set to at least 1 to use GPU
-        model_kwargs={"n_gpu_layers": int(os.getenv('GPU_LAYERS',default=cfg.get_config('model','gpu_layers',default=0)))},
-        verbose=True,
-        )
-        '''
+    
 
         self.service_context = ServiceContext.from_defaults(
         llm=self.llm, embed_model=self.embed_model
@@ -166,10 +150,14 @@ class PDF_Processor():
         return True
             
 
-    def processPDF(self,filepath):
-        loader = PyMuPDFReader()
-        documents = loader.load(file_path=filepath)
+    def processDirectory(self, path):
+        loader = SimpleDirectoryReader(input_dir=path)
+        documents = loader.load_data()
         self.filepathes.append(filepath)
+        self.processDocs(documents)
+        self.remove(filepath)
+
+    def processDocs(self,documents):
         text_chunks = []
         # maintain relationship with source doc index, to help inject doc metadata in (3)
         doc_idxs = []
@@ -194,7 +182,14 @@ class PDF_Processor():
             node.embedding = node_embedding
         
         self.vector_store.add(nodes)
+        
         self.nodes.extend(nodes)
+
+    def processPDF(self,filepath):
+        loader = PyMuPDFReader()
+        documents = loader.load(file_path=filepath)
+        self.filepathes.append(filepath)
+        self.processDocs(documents)
         self.remove(filepath)
 
     def askPDF(self,question):
