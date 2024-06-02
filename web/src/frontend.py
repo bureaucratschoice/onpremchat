@@ -518,7 +518,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg,statistic) -> None:
             with ui.tab_panel(pdf_tab).classes('items-stretch'):
                 pdf_messages()
 
-                ui.upload(on_upload=handle_upload,multiple=True,label='Upload PDF',max_total_size=9048576).props('accept=.pdf,.docx').classes('max-w-full').bind_visibility_from(pdf_ready,'ready_to_upload')
+                ui.upload(on_upload=handle_upload,multiple=True,label='Upload Files',max_total_size=9048576).props('accept=".pdf,.docx"').classes('max-w-full').bind_visibility_from(pdf_ready,'ready_to_upload')
 
 
         with ui.footer().classes('bg-white'):

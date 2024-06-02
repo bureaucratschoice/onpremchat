@@ -3,6 +3,7 @@ from llama_index.llms import LlamaCPP
 from llama_index import ServiceContext
 from llama_index.vector_stores import SimpleVectorStore
 from llama_hub.file.pymu_pdf.base import PyMuPDFReader
+from llama_index import SimpleDirectoryReader
 from llama_index.node_parser.text import SentenceSplitter
 from llama_index.schema import TextNode
 from llama_index.vector_stores import VectorStoreQuery
@@ -153,9 +154,9 @@ class PDF_Processor():
     def processDirectory(self, path):
         loader = SimpleDirectoryReader(input_dir=path)
         documents = loader.load_data()
-        self.filepathes.append(filepath)
+        self.filepathes.append(path)
         self.processDocs(documents)
-        self.remove(filepath)
+        self.remove(path)
 
     def processDocs(self,documents):
         text_chunks = []
