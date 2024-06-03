@@ -224,20 +224,16 @@ class MainProcessor (threading.Thread):
                         self.jobStat.updateStatus(job['token'],job['uuid'],"failed")
                     else:
                         answer = pdfProc.askPDF(item['prompt'][-1])
-                        #print(answer)
-                        #answer.print_response_stream()
                         for answ in answer:
-                            
-                            #print(answ)
-                            #res = answ#answ['choices'][0]['text'] 
                             response += answ
                             if not self.jobStat.updateAnswer(job['token'],job['uuid'],response):
                                 break
-                        print(response)
                         metadatas = pdfProc.getLastResponseMetaData()
                         response = response + "(vgl. "
                         for metadata in metadatas:
                             source = metadata['source'] if 'source' in metadata else '?'
+                            if source == '?':
+                                source = metadata['page_label'] if 'page_label' in metadata else '?'
                             name = metadata['file_path'] if 'file_path' in metadata else '?'
                             if '/' in name:
                                 name = name.split('/')[-1]
@@ -261,7 +257,6 @@ class MainProcessor (threading.Thread):
                         else:
                             summarizer = pdftools.SimplePdfSummarizer(llm,pdf_proc,create_callback,update_callback,status_callback,cfg)
                         if not summarizer.run():
-                            print('putting summarizer again')
                             self.taskQueue.put({'token':job['token'],'uuid':job['uuid'],'summarizer':summarizer})
 
                     else:

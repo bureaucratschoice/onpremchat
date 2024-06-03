@@ -185,7 +185,6 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg,statistic) -> None:
             message = app.storage.user['text']
             custom_config = {'temperature':app.storage.user['temperature']/100,'max_tokens':app.storage.user['max_tokens'],'top_k':app.storage.user['top_k'],'top_p':app.storage.user['top_p']/100,'repeat_penalty':app.storage.user['repeat_penalty']/100}
             text.value = ''
-            print(custom_config)
             jobStat.addJob(app.storage.browser['id'],app.storage.user['chat_job'],message,custom_config,'chat')
             job = {'token':app.storage.browser['id'],'uuid':app.storage.user['chat_job']}
             try:
@@ -454,7 +453,6 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg,statistic) -> None:
             message = app.storage.user['pdf_question']
             #custom_config = {'temperature':app.storage.user['temperature']/100,'max_tokens':app.storage.user['max_tokens'],'top_k':app.storage.user['top_k'],'top_p':app.storage.user['top_p']/100,'repeat_penalty':app.storage.user['repeat_penalty']/100}
             text.value = ''
-            #print(custom_config)
             jobStat.addJob(app.storage.browser['id'],app.storage.user['pdf_job'],message,job_type = 'pdf_chat' )
             job = {'token':app.storage.browser['id'],'uuid':app.storage.user['pdf_job']}
             try:
@@ -518,7 +516,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg,statistic) -> None:
             with ui.tab_panel(pdf_tab).classes('items-stretch'):
                 pdf_messages()
 
-                ui.upload(on_upload=handle_upload,multiple=True,label='Upload Files',max_total_size=9048576).props('accept=".pdf,.docx"').classes('max-w-full').bind_visibility_from(pdf_ready,'ready_to_upload')
+                ui.upload(on_upload=handle_upload,multiple=True,label='Upload Files',max_total_size=9048576).props('accept=".pdf,.docx,.csv"').classes('max-w-full').bind_visibility_from(pdf_ready,'ready_to_upload')
 
 
         with ui.footer().classes('bg-white'):

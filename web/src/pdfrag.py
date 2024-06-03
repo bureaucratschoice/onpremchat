@@ -209,7 +209,6 @@ class PDF_Processor():
             self.vector_store, self.embed_model, self.nodes, query_mode="default", similarity_top_k=top_k
         )
         nodes_with_scores = retriever.retrieve(question)
-        print(nodes_with_scores)
         return nodes_with_scores
 
     def getLastResponseMetaData(self):
@@ -223,11 +222,17 @@ class PDF_Processor():
     def getNodesContents(self):
         for node in self.nodes:
             content = node.get_content()
-            print(node.metadata)
+            
             name = str(node.metadata['file_path']) if 'file_path' in node.metadata else 'unknown'
             if '/' in name:
                 name = name.split('/')[-1]
-            source = str(node.metadata['source']) if 'source' in node.metadata else 'unknown'
+            if 'source' in node.metadata:
+                source = str(node.metadata['source'])
+            else:
+                if 'page_label' in node.metadata:
+                    source = str(node.metadata['page_label']) 
+                else: 
+                    source = '?'
             yield content, name, source
 
 

@@ -152,9 +152,6 @@ class SimplePdfTopicModeller(threading.Thread):
             prompt = f"Ihre Aufgabe ist es, die Themen aufzulisten, die wesentlich für den folgenden Text sind. Schreiben Sie maximal drei Themen auf. Schreiben Sie nichts, wenn es sich um ein Inhaltsverzeichnis oder bibliografische Informationen handelt. Der Text ist in dreifachen Aposthrophen '''TEXT''' eingefasst. Ihre Antwort soll als Python-Liste ausgegeben werden, etwa ['Demographie','Fussball','Altenpflege']: '''{text}'''. Schreiben Sie maximal drei wesentliche Themen des Textes als Python-Liste []. ASSISTANT:"
             try:
                 answer = self.llm(prompt, stream=False, temperature = 0.1, max_tokens = 512, top_k=20) #top_k=20, top_p=0.9,repeat_penalty=1.15)
-                
-                print(answer['choices'][0]['text'])
-
                 if not self.update_callback(response):
                     break
             except Exception as error:

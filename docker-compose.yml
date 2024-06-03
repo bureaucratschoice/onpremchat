@@ -8,6 +8,8 @@ services:
       - SUPERTOKEN=PLEASE_CHANGE_THIS_PLEASE # Really please change this, otherwise everyone reading the github repo can get access.
       - MODEL_DOWNLOAD_URL=https://huggingface.co/TheBloke/em_german_leo_mistral-GGUF/resolve/main/em_german_leo_mistral.Q5_K_S.gguf
       - MODEL_BIN_PATH=/models/em_german_leo_mistral.Q5_K_S.gguf
+      - HUGGINGFACE_HUB_CACHE=/models/hub
+      - HF_DATASETS_OFFLINE=1
     volumes:
       - ./models:/models
       - ./config:/config
