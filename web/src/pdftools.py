@@ -65,6 +65,118 @@ class SimplePdfSummarizer():
         self.status_callback("finished")
         return True
 
+class AdvancedPdfSummarizer():
+    def __init__(self,llm,pdf_proc,create_callback,update_callback,status_callback,cfg):
+        self.llm = llm
+        self.create_callback = create_callback
+        self.update_callback = update_callback
+        self.status_callback = status_callback
+        self.content_gen = pdf_proc.getNodesContents()
+        self.cfg = cfg
+        #Info needed to summarize multiple pages until token limit
+        self.total_tokens = 0
+        self.total_text = ""
+        self.names = []
+        self.sources = []
+        #Info for advanced summary quality
+        
+    
+    def identifyGenre(self,snippet):
+        prompt = f"Bitte bestimmen Sie, um welche Art von Text es sich bei dem folgenden Ausschnitt handelt:'''{snippet}'''. Um welche Art von Text handelt es sich? ASSISTANT:"
+        genre = ""
+        try:
+            answer = self.llm(prompt, stream=True, temperature = 0.7, max_tokens = 512) #top_k=20, top_p=0.9,repeat_penalty=1.15)
+                
+            for answ in answer:
+                res = answ['choices'][0]['text'] 
+                genre += res
+            print(genre)
+
+        except Exception as error:
+            print(error)
+            genre = ""
+        return genre
+
+    def findHeading(self,snippet):
+        heading = ""
+        prompt = f"Bitte geben Sie dem folgenden Text eine treffende Überschrift:'''{snippet}'''. Wie sollte die Überschrift lauten? ASSISTANT:"
+        try:
+            answer = self.llm(prompt, stream=True, temperature = 0.7, max_tokens = 512) #top_k=20, top_p=0.9,repeat_penalty=1.15)
+                
+            for answ in answer:
+                res = answ['choices'][0]['text'] 
+                heading += res
+            print(heading)
+
+        except Exception as error:
+            print(error)
+            heading = ""
+        return heading
+
+    def summarizeSnippet(self,snippet,names,sources):
+        
+        heading = self.findHeading(snippet)
+        genre = self.identifyGenre(snippet)
+        response = ""
+                         
+        prompt = f"Ihre Aufgabe ist es, eine kurze Zusammenfassung des folgenden Textes der Gattung {genre} mit der Überschrift '''{heading}''' in maximal drei Sätzen zu schreiben. Schreiben Sie nichts, wenn es sich nur um ein Inhaltsverzeichnis oder bibliografische Informationen handelt. Der Text ist in dreifachen Aposthrophen '''TEXT''' eingefasst: '''{snippet}'''. Schreiben Sie eine Zusammenfassung in drei Sätzen in Markdown. ASSISTANT:"
+        try:
+            answer = self.llm(prompt, stream=True, temperature = 0.1, max_tokens = 512) #top_k=20, top_p=0.9,repeat_penalty=1.15)
+                
+            for answ in answer:
+                res = answ['choices'][0]['text'] 
+                response += res
+                if not self.update_callback(response):
+                    return False
+        except Exception as error:
+            print(error)
+            response = "An Error occured."
+
+        scorer = rouge_scorer.RougeScorer(['rouge1', 'rougeL'], use_stemmer=True)
+        scores = scorer.score(snippet,response)
+        rouge1 = scores['rouge1'].fmeasure
+
+        self.update_callback(response+" (Vgl. "+str(names)+":"+str(sources[0]+"-"+sources[-1])+") (Score: "+str(round(rouge1,2))+")")
+        return True
+
+
+    def run(self):
+        #set_break = False
+        self.create_callback("")
+        for text, name, source in self.content_gen:
+            snippet_tokens = len(self.llm.tokenize(text.encode(encoding = 'UTF-8', errors = 'strict')))
+            if snippet_tokens + self.total_tokens > int(os.getenv('NUMBER_OF_TOKENS_PDF',default=self.cfg.get_config('model','number_of_tokens_pdf',default=3800))):
+                heading = self.findHeading(self.total_text)
+                if not self.update_callback(heading +'\n'):
+                    break
+                self.total_text = text
+                return False
+            else:
+                self.total_tokens += snippet_tokens
+                self.total_text += "\n" + text               
+        self.content_gen = pdf_proc.getNodesContents()
+        for text, name, source in self.content_gen:
+            snippet_tokens = len(self.llm.tokenize(text.encode(encoding = 'UTF-8', errors = 'strict')))
+            if snippet_tokens + self.total_tokens > int(os.getenv('NUMBER_OF_TOKENS_PDF',default=self.cfg.get_config('model','number_of_tokens_pdf',default=3800))):
+                if not self.summarizeSnippet(self.total_text,self.names,self.sources):
+                    break
+                self.total_tokens = snippet_tokens
+                self.total_text = text
+                self.names = [name]
+                self.sources = [source]
+                return False                                
+            else:
+                self.total_tokens += snippet_tokens
+                self.total_text += "\n" + text
+                if not name in self.names:
+                    self.names.append(name)
+                self.sources.append(source)           
+        
+        self.summarizeSnippet(self.total_text,self.names,self.sources)
+        self.status_callback("finished")
+        return True
+
+
 class SimpleGraphExtractor():
     def __init__(self,llm,pdf_proc,create_callback,update_callback,status_callback,cfg):
         self.llm = llm

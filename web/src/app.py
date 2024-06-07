@@ -20,7 +20,7 @@ llm2 = LlamaCPP(
         generate_kwargs={},
         # kwargs to pass to __init__()
         # set to at least 1 to use GPU
-        model_kwargs={"n_gpu_layers": int(os.getenv('GPU_LAYERS',default=cfg.get_config('model','gpu_layers',default=0)))},
+        model_kwargs={"n_gpu_layers": int(os.getenv('GPU_LAYERS',default=cfg.get_config('model','gpu_layers',default=0))),n_ctx:os.getenv('NUMBER_OF_TOKENS',default=cfg.get_config('model','number_of_tokens',default=4096))},
         verbose=True,
         )
             
@@ -255,7 +255,12 @@ class MainProcessor (threading.Thread):
                         if 'summarizer' in job:
                             summarizer = job['summarizer']
                         else:
-                            summarizer = pdftools.SimplePdfSummarizer(llm,pdf_proc,create_callback,update_callback,status_callback,cfg)
+                            summarizer_type = os.getenv('SUMMARIZER',default=cfg.get_config('model','summarizer',default="simple"))
+                            if summarizer_type == "advanced":
+                                summarizer = pdftools.AdvancedPdfSummarizer(llm,pdf_proc,create_callback,update_callback,status_callback,cfg)
+                            else:
+                                summarizer = pdftools.SimplePdfSummarizer(llm,pdf_proc,create_callback,update_callback,status_callback,cfg)
+                                
                         if not summarizer.run():
                             self.taskQueue.put({'token':job['token'],'uuid':job['uuid'],'summarizer':summarizer})
 
@@ -276,8 +281,8 @@ class MainProcessor (threading.Thread):
                             i_p += 1
                             i_a += 1
             
-                        if len(instruction) >= 14000:
-                            instruction = instruction[-14000:]
+                        #if len(instruction) >= 14000:
+                        #    instruction = instruction[-14000:]
                         chatprompt = os.getenv('CHATPROMPT',default=cfg.get_config('model','chatprompt',default="Du bist ein hilfreicher Assistent."))
                         prompt = f"{chatprompt} {instruction} ASSISTANT:"
             
@@ -295,7 +300,7 @@ class MainProcessor (threading.Thread):
                                 if not self.jobStat.updateAnswer(job['token'],job['uuid'],response):
                                     break
                         except:
-                            response = "An Error occured."
+                            response = os.getenv('CHATERROR',default=cfg.get_config('model','chaterror',default="Sie haben die maximale Chatlänge erreicht."))
                         self.jobStat.updateAnswer(job['token'],job['uuid'],response)            
                         self.jobStat.updateStatus(job['token'],job['uuid'],"finished")
 

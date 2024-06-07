@@ -11,6 +11,7 @@ model:
   number_of_tokens: 4096
   verbose: True
   gpu_layers: 0
+  summarizer: "simple"
 
 frontend:
   assistant: "Assistent:in"

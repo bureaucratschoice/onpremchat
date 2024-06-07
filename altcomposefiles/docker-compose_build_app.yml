@@ -11,6 +11,7 @@ services:
       - SUPERTOKEN=PLEASE_CHANGE_THIS_PLEASE # Really please change this, otherwise everyone reading the github repo can get access.
       - HUGGINGFACE_HUB_CACHE=/models/hub
       - HF_DATASETS_OFFLINE=1
+      #- SUMMARIZER=advanced
     volumes:
       - ../models:/models
       - ../config:/config
