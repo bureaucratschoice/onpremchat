@@ -9,7 +9,7 @@ import os
 
 from llama_index.llms import LlamaCPP
 
-
+n_ctx = int(os.getenv('NUMBER_OF_TOKENS',default=cfg.get_config('model','number_of_tokens',default=4096)))
 llm2 = LlamaCPP(
         # You can pass in the URL to a GGML model to download it automatically
         # optionally, you can set the path to a pre-downloaded model instead of model_url
@@ -17,12 +17,12 @@ llm2 = LlamaCPP(
         temperature=0.1,
         max_new_tokens=512,
         # llama2 has a context window of 4096 tokens, but we set it lower to allow for some wiggle room
-        context_window=3900,
+        context_window=n_ctx,
         # kwargs to pass to __call__()
         generate_kwargs={},
         # kwargs to pass to __init__()
         # set to at least 1 to use GPU
-        model_kwargs={"n_gpu_layers": int(os.getenv('GPU_LAYERS',default=cfg.get_config('model','gpu_layers',default=0))),"n_ctx":int(os.getenv('NUMBER_OF_TOKENS',default=cfg.get_config('model','number_of_tokens',default=4096)))},
+        model_kwargs={"n_gpu_layers": int(os.getenv('GPU_LAYERS',default=cfg.get_config('model','gpu_layers',default=0))),"n_ctx":n_ctx},
         verbose=True,
         )
 

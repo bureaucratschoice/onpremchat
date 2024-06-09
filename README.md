@@ -34,9 +34,32 @@ Since version 0.7, config via a config file, RAG and summarizing for PDF are sup
 * Configuration is done via environment variables. Default config loads a german fine tuned llm. 
 
 ## Configuration options general:
-* SUPERTOKEN - The token for admin access to the api
+
+### Model confguration
 * MODEL_DOWNLOAD_URL - The URL to download a model in GGUF format from.
 * MODEL_BIN_PATH - The path of the model as /models/[OPTIONAL_SUBDIRECTORIES]/FILENAME
+* NUMBER_OF_TOKENS - Context Window (Number)
+* TEMPERATURE - temperature
+* MAX_TOKENS - maximum tokens to generate
+* TOP_K - top k
+* TOP_P - top p
+* REPEAT_PENALTY - repeat penalty
+* SUMMARIZER - simple or advanced, advanced is experimental, gpu recomended
+* CHATPROMPT - Systemprompt for Chat
+* PROMPTFORMAT - leo-mistral or llama3 depending on the model
+
+### App configuration
+* SUPERTOKEN - The token for admin access to the api
+* CHATERROR - Errormessage for llm errors in chat
+* ASSISTANT - Name of assistant
+* YOU - How the user is adressed
+* GREETING - Greetingmessage in chat
+* PDFGREETING - Greetingmessage in pdf
+* PDFPROC - Message while pdf is processed
+* APP_TITLE - Title of the app
+* TOCHAT - Text of chat link
+* TOPDF - Text of PDF link
+
 
 ## Additional options for GPU image:
 * GPU_LAYERS - The number of layers to load on GPU
