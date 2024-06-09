@@ -195,7 +195,7 @@ class PDF_Processor():
 
     def askPDF(self,question):
         retriever = OwnRetriever(
-            self.vector_store, self.embed_model, self.nodes, query_mode="default", similarity_top_k=1
+            self.vector_store, self.embed_model, self.nodes, query_mode="default", similarity_top_k=3
         )
         query_engine = RetrieverQueryEngine.from_args(
             retriever, service_context=self.service_context, streaming = True
