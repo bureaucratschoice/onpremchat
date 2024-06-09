@@ -1,6 +1,6 @@
 from llama_index.prompts import PromptTemplate
 
-class PromptFomater ():
+class PromptFomater():
     
     def llama_prompt(self,sysprompt,prompts,answers):
         i_p = 0
@@ -12,8 +12,8 @@ class PromptFomater ():
 
             if i_a < len(answers):
                 prompt += f"<|assistant|>\n{answers[i_a]}</s>\n"
-                i_p += 1
-                i_a += 1
+            i_p += 1
+            i_a += 1
         prompt = prompt + "<|assistant|>\n"
         return prompt
 
@@ -27,8 +27,8 @@ class PromptFomater ():
 
             if i_a < len(answers):
                 prompt += f"{answers[i_a]}<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n"
-                i_p += 1
-                i_a += 1
+            i_p += 1
+            i_a += 1
         print(prompt)
         return prompt
 
@@ -40,8 +40,8 @@ class PromptFomater ():
             prompt += "USER:  " + prompts[i_p]
             if i_a < len(answers):
                 prompt += "ASSISTANT:  " + answers[i_a]
-                i_p += 1
-                i_a += 1
+            i_p += 1
+            i_a += 1
                             
         prompt = f"{sysprompt} {prompt} ASSISTANT:"    
         return prompt

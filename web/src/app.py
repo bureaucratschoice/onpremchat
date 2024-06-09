@@ -206,7 +206,7 @@ class MainProcessor (threading.Thread):
             self.jobStat.updateStatus(job['token'],job['uuid'],"processing")
             item = self.jobStat.getJobStatus(job['token'],job['uuid'])
             self.statistic.updateQueueSize(self.jobStat.countQueuedJobs())
-            
+            print(item['job_type'])
             if 'job_type' in item and item['job_type'] == 'pdf_processing':
                 if 'filepath' in job:
                     filepath = job['filepath']
@@ -272,9 +272,12 @@ class MainProcessor (threading.Thread):
                     else:
                         sysprompt = os.getenv('CHATPROMPT',default=cfg.get_config('model','chatprompt',default="Du bist ein hilfreicher Assistent."))
                         prompt_format = os.getenv('PROMPTFORMAT',default=cfg.get_config('model','promptformat',default="leo-mistral"))
+                        print("inChat")
                         formatter = PromptFomater()
+                        print(item)
                         prompt = formatter.format(item,sysprompt,prompt_format)
                         response = ""
+                        print("Formattet")
                         self.jobStat.addAnswer(job['token'],job['uuid'],response)
                         try:
                             if item['custom_config']:
