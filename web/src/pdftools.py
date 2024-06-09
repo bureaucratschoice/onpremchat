@@ -73,6 +73,7 @@ class AdvancedPdfSummarizer():
         self.status_callback = status_callback
         self.content_gen = pdf_proc.getNodesContents()
         self.cfg = cfg
+        self.pdf_proc = pdf_proc
         #Info needed to summarize multiple pages until token limit
         self.total_tokens = 0
         self.total_text = ""
@@ -154,7 +155,9 @@ class AdvancedPdfSummarizer():
             else:
                 self.total_tokens += snippet_tokens
                 self.total_text += "\n" + text               
-        self.content_gen = pdf_proc.getNodesContents()
+        self.content_gen = self.pdf_proc.getNodesContents()
+        self.total_tokens = 0
+        self.total_text = ""
         for text, name, source in self.content_gen:
             snippet_tokens = len(self.llm.tokenize(text.encode(encoding = 'UTF-8', errors = 'strict')))
             if snippet_tokens + self.total_tokens > int(os.getenv('NUMBER_OF_TOKENS_PDF',default=self.cfg.get_config('model','number_of_tokens_pdf',default=3800))):

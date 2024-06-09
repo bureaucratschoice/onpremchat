@@ -4,10 +4,12 @@ import requests
 import json
 print("start")
 cfg = config()
-llm = build_llm(cfg)
+#llm = build_llm(cfg)
 import os
 
 from llama_index.llms import LlamaCPP
+
+
 llm2 = LlamaCPP(
         # You can pass in the URL to a GGML model to download it automatically
         # optionally, you can set the path to a pre-downloaded model instead of model_url
@@ -20,10 +22,11 @@ llm2 = LlamaCPP(
         generate_kwargs={},
         # kwargs to pass to __init__()
         # set to at least 1 to use GPU
-        model_kwargs={"n_gpu_layers": int(os.getenv('GPU_LAYERS',default=cfg.get_config('model','gpu_layers',default=0))),n_ctx:os.getenv('NUMBER_OF_TOKENS',default=cfg.get_config('model','number_of_tokens',default=4096))},
+        model_kwargs={"n_gpu_layers": int(os.getenv('GPU_LAYERS',default=cfg.get_config('model','gpu_layers',default=0))),"n_ctx":int(os.getenv('NUMBER_OF_TOKENS',default=cfg.get_config('model','number_of_tokens',default=4096)))},
         verbose=True,
         )
-            
+
+llm = llm2          
 
 
 from fastapi import FastAPI
@@ -44,7 +47,7 @@ import pdftools
 from pdfrag import PDF_Processor
 from statistics import Statistic
 
-
+from promptutils import PromptFomater
 
 
 class jobStatus():
@@ -194,6 +197,8 @@ class MainProcessor (threading.Thread):
         self.taskQueue = taskQueue
         self.jobStat = jobStat
         self.statistic = statistic
+
+
         
     def run(self):
         while True:
@@ -265,41 +270,28 @@ class MainProcessor (threading.Thread):
                             self.taskQueue.put({'token':job['token'],'uuid':job['uuid'],'summarizer':summarizer})
 
                     else:
-
-                        prompts = item['prompt']
-                        answers = []
-                        if 'answer' in item:
-                            answers = item['answer']
-            
-                        i_p = 0
-                        i_a = 0
-                        instruction = ""
-                        while i_p < len(prompts):
-                            instruction += "USER:  " + prompts[i_p]
-                            if i_a < len(answers):
-                                instruction += "ASSISTANT:  " + answers[i_a]
-                            i_p += 1
-                            i_a += 1
-            
-                        #if len(instruction) >= 14000:
-                        #    instruction = instruction[-14000:]
-                        chatprompt = os.getenv('CHATPROMPT',default=cfg.get_config('model','chatprompt',default="Du bist ein hilfreicher Assistent."))
-                        prompt = f"{chatprompt} {instruction} ASSISTANT:"
-            
+                        sysprompt = os.getenv('CHATPROMPT',default=cfg.get_config('model','chatprompt',default="Du bist ein hilfreicher Assistent."))
+                        prompt_format = os.getenv('PROMPTFORMAT',default=cfg.get_config('model','promptformat',default="leo-mistral"))
+                        formatter = PromptFomater()
+                        prompt = formatter.format(item,sysprompt,prompt_format)
                         response = ""
                         self.jobStat.addAnswer(job['token'],job['uuid'],response)
                         try:
                             if item['custom_config']:
-                                answer = llm(prompt, stream=True, temperature = item['custom_config']['temperature'], max_tokens = item['custom_config']['max_tokens'], top_k=item['custom_config']['top_k'], top_p=item['custom_config']['top_p'],repeat_penalty=item['custom_config']['repeat_penalty'])
+                                #answer = llm(prompt, stream=True, temperature = item['custom_config']['temperature'], max_tokens = item['custom_config']['max_tokens'], top_k=item['custom_config']['top_k'], top_p=item['custom_config']['top_p'],repeat_penalty=item['custom_config']['repeat_penalty'])
+                                answer = llm.stream(prompt)
                             else:
-                                answer = llm(prompt, stream=True, temperature = 0.7, max_tokens = 1024, top_k=20, top_p=0.9,repeat_penalty=1.15)
-                
+                                #answer = llm(prompt, stream=True, temperature = 0.7, max_tokens = 1024, top_k=20, top_p=0.9,repeat_penalty=1.15)
+                                answer = llm.stream(prompt)
                             for answ in answer:
-                                res = answ['choices'][0]['text'] 
+                                #res = answ['choices'][0]['text']
+                                res = answ 
+
                                 response += res
                                 if not self.jobStat.updateAnswer(job['token'],job['uuid'],response):
                                     break
-                        except:
+                        except Exception as e:
+                            print(e)
                             response = os.getenv('CHATERROR',default=cfg.get_config('model','chaterror',default="Sie haben die maximale Chatlänge erreicht."))
                         self.jobStat.updateAnswer(job['token'],job['uuid'],response)            
                         self.jobStat.updateStatus(job['token'],job['uuid'],"finished")
