@@ -57,5 +57,5 @@ class PromptFomater():
         else:
             prompt = self.leo_mistral_prompt(sysprompt,prompts,answers)
 
-        prompt = PromptTemplate(prompt)        
+        #prompt = PromptTemplate(prompt)        
         return prompt

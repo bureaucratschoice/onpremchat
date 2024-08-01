@@ -4,8 +4,8 @@ import requests
 import json
 print("start")
 cfg = config()
-#llm = build_llm(cfg)
-llm = build_llm_LI(cfg)
+llm = build_llm(cfg)
+#llm = build_llm_LI(cfg)
 import os
 
 from fastapi import FastAPI
@@ -260,14 +260,23 @@ class MainProcessor (threading.Thread):
                         self.jobStat.addAnswer(job['token'],job['uuid'],response)
                         try:
                             if item['custom_config']:
-                                #answer = llm(prompt, stream=True, temperature = item['custom_config']['temperature'], max_tokens = item['custom_config']['max_tokens'], top_k=item['custom_config']['top_k'], top_p=item['custom_config']['top_p'],repeat_penalty=item['custom_config']['repeat_penalty'])
-                                answer = llm.stream(prompt)
+                                kwargs = {'temperature':item['custom_config']['temperature'], 'max_tokens':item['custom_config']['max_tokens'], 'top_k':item['custom_config']['top_k'], 'top_p':item['custom_config']['top_p'],'repeat_penalty':item['custom_config']['repeat_penalty']}
+                                answer = llm(prompt, stream=True, temperature = item['custom_config']['temperature'], max_tokens = item['custom_config']['max_tokens'], top_k=item['custom_config']['top_k'], top_p=item['custom_config']['top_p'],repeat_penalty=item['custom_config']['repeat_penalty'])
+                                #answer = llm.stream(prompt)
+                                #answer = llm.stream(prompt, kwargs)
                             else:
-                                #answer = llm(prompt, stream=True, temperature = 0.7, max_tokens = 1024, top_k=20, top_p=0.9,repeat_penalty=1.15)
-                                answer = llm.stream(prompt)
+                                
+                                temperature = os.getenv('TEMPERATURE',default=cfg.get_config('model','temperature',default=0.7))
+                                max_new_tokens = os.getenv('MAX_TOKENS',default=cfg.get_config('model','max_tokens',default=4000))
+                                top_k = os.getenv('TOP_K',default=cfg.get_config('model','top_k',default=40))
+                                top_p = os.getenv('TOP_P',default=cfg.get_config('model','top_p',default=0.9))
+                                repeat_penalty = os.getenv('REPEAT_PENALTY',default=cfg.get_config('model','repeat_penalty',default=1.15))
+                                answer = llm(prompt, stream=True, temperature = temperature, max_tokens = max_new_tokens, top_k=top_k, top_p=top_p,repeat_penalty=repeat_penalty)
+                                #answer = llm.stream(prompt)
+                                
                             for answ in answer:
-                                #res = answ['choices'][0]['text']
-                                res = answ 
+                                res = answ['choices'][0]['text']
+                                #res = answ 
 
                                 response += res
                                 if not self.jobStat.updateAnswer(job['token'],job['uuid'],response):
