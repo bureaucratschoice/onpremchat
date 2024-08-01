@@ -53,9 +53,9 @@ def build_llm_LI(cfg):
         model_path=os.getenv('MODEL_BIN_PATH',default=cfg.get_config('model','model_bin_path',default="/models/em_german_leo_mistral.Q5_K_S.gguf")),
         temperature=temperature,
         max_new_tokens=max_new_tokens,
-        context_window=n_ctx,
+        context_window=ntokens,
         generate_kwargs={},
-        model_kwargs={"n_gpu_layers": int(os.getenv('GPU_LAYERS',default=cfg.get_config('model','gpu_layers',default=0))),"n_ctx":n_ctx},
+        model_kwargs={"n_gpu_layers": int(os.getenv('GPU_LAYERS',default=cfg.get_config('model','gpu_layers',default=0))),"n_ctx":ntokens},
         verbose=True,
         )
     return llm
