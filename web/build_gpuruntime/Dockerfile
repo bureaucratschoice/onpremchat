@@ -15,16 +15,20 @@ RUN apt-get update \
         nano \
         python3 \
         python3-pip \
+        ninja-build \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 ADD ./src/ /app
-RUN pip install --no-cache-dir -r requirements.txt
+
+RUN CMAKE_ARGS="-DLLAVA_BUILD=off" pip install --no-cache-dir -r requirements.txt
 #ENV CMAKE_ARGS="-DLLAMA_CUBLAS=ON"
 #ENV FORCE_CMAKE=1 
 #RUN CMAKE_ARGS="-DLLAMA_CUBLAS=ON" FORCE_CMAKE=1 pip install --upgrade --force-reinstall llama-cpp-python --no-cache-dir
-RUN CUDACXX=/usr/local/cuda-12/bin/nvcc CMAKE_ARGS="-DLLAMA_CUBLAS=on -DCMAKE_CUDA_ARCHITECTURES=all-major" FORCE_CMAKE=1 \
-    pip install "llama-cpp-python==0.2.57" --no-cache-dir --force-reinstall --upgrade
+#RUN CUDACXX=/usr/local/cuda-12/bin/nvcc CMAKE_ARGS="-DLLAMA_CUBLAS=on -DCMAKE_CUDA_ARCHITECTURES=all-major" FORCE_CMAKE=1 \
+#    pip install "llama-cpp-python==0.2.57" --no-cache-dir --force-reinstall --upgrade
+RUN CUDACXX=/usr/local/cuda-12/bin/nvcc CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_CUDA_ARCHITECTURES=all-major -DLLAVA_BUILD=off" FORCE_CMAKE=1 \
+    pip install "llama-cpp-python" --no-cache-dir --force-reinstall --upgrade
 EXPOSE 80
 
 ENV PYTHONDONTWRITEBYTECODE=1

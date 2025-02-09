@@ -18,7 +18,8 @@ RUN apt-get update \
 
 WORKDIR /app
 #RUN pip install transformers[tf-cpu]
-RUN pip install --no-cache-dir -r requirements.txt
+
+RUN CMAKE_ARGS="-DLLAVA_BUILD=off" pip install --no-cache-dir -r requirements.txt
 #RUN CMAKE_ARGS="-DLLAMA_CUBLAS=on" FORCE_CMAKE=1 pip install llama-cpp-python
 
 FROM python:3.10-slim-bullseye
