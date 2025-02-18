@@ -7,10 +7,14 @@ sentence-transformers
 uvicorn
 llama-cpp-python
 nicegui
-llama_index
+#llama_index
 sentencepiece
 llama-hub
 PyMuPDF
 rouge-score
 PyYAML
 docx2txt
+llama-index-core 
+llama-index-embeddings-huggingface 
+llama-index-llms-llama-cpp 
+llama-index-readers-file 

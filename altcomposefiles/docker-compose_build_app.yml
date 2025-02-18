@@ -5,8 +5,8 @@ services:
       context: ../web
       dockerfile: ./build_app/Dockerfile
     image:
-      bureaucratschoice/onpremchat:testing
-    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "80"] 
+      bureaucratschoice/onpremchat:testing0.8
+    command:  ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "80"] #["bash"]
     environment:
       - SUPERTOKEN=PLEASE_CHANGE_THIS_PLEASE # Really please change this, otherwise everyone reading the github repo can get access.
       - HUGGINGFACE_HUB_CACHE=/models/hub

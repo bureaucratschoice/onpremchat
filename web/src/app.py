@@ -1,33 +1,31 @@
-from llm import build_llm
+from llm import build_llm, download_file
 from config import config
 import requests
 import json
 print("start")
 cfg = config()
-#llm = build_llm(cfg)
 import os
 
-from llama_index.llms import LlamaCPP
+from llama_index.llms.llama_cpp import LlamaCPP  # Aktualisierte Importstruktur
 
-n_ctx = int(os.getenv('NUMBER_OF_TOKENS',default=cfg.get_config('model','number_of_tokens',default=4096)))
+n_ctx = int(os.getenv('NUMBER_OF_TOKENS', default=cfg.get_config('model', 'number_of_tokens', default=4096)))
+url= os.getenv('MODEL_DOWNLOAD_URL',default=cfg.get_config('model','model_download_url',default="https://huggingface.co/TheBloke/em_german_leo_mistral-GGUF/resolve/main/em_german_leo_mistral.Q5_K_S.gguf"))
+filename = os.getenv('MODEL_BIN_PATH',default=cfg.get_config('model','model_bin_path',default="/models/em_german_leo_mistral.Q5_K_S.gguf"))
+if not os.path.exists(filename):
+    print("Specified Model not found. Downloading Model...")
+    download_file(url,filename)
+    print("Download complete.")
 llm2 = LlamaCPP(
-        # You can pass in the URL to a GGML model to download it automatically
-        # optionally, you can set the path to a pre-downloaded model instead of model_url
-        model_path=os.getenv('MODEL_BIN_PATH',default=cfg.get_config('model','model_bin_path',default="/models/em_german_leo_mistral.Q5_K_S.gguf")),
-        temperature=0.1,
-        max_new_tokens=512,
-        # llama2 has a context window of 4096 tokens, but we set it lower to allow for some wiggle room
-        context_window=n_ctx,
-        # kwargs to pass to __call__()
-        generate_kwargs={},
-        # kwargs to pass to __init__()
-        # set to at least 1 to use GPU
-        model_kwargs={"n_gpu_layers": int(os.getenv('GPU_LAYERS',default=cfg.get_config('model','gpu_layers',default=0))),"n_ctx":n_ctx},
-        verbose=True,
-        )
+    model_path=os.getenv('MODEL_BIN_PATH', default=cfg.get_config('model', 'model_bin_path', default="/models/em_german_leo_mistral.Q5_K_S.gguf")),
+    temperature=0.1,
+    max_new_tokens=512,
+    context_window=n_ctx,
+    generate_kwargs={},
+    model_kwargs={"n_gpu_layers": int(os.getenv('GPU_LAYERS', default=cfg.get_config('model', 'gpu_layers', default=0))), "n_ctx": n_ctx},
+    verbose=True,
+)
 
-llm = llm2          
-
+llm = llm2
 
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -43,10 +41,8 @@ import threading
 import queue
 import pdftools
 
-
 from pdfrag import PDF_Processor
 from statistics import Statistic
-
 from promptutils import PromptFomater
 
 

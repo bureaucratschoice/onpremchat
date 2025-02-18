@@ -1,18 +1,18 @@
-from llama_index.embeddings import HuggingFaceEmbedding
-from llama_index.llms import LlamaCPP
-from llama_index import ServiceContext
-from llama_index.vector_stores import SimpleVectorStore
-from llama_hub.file.pymu_pdf.base import PyMuPDFReader
-from llama_index import SimpleDirectoryReader
-from llama_index.node_parser.text import SentenceSplitter
-from llama_index.schema import TextNode
-from llama_index.vector_stores import VectorStoreQuery
-from llama_index.schema import NodeWithScore
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.llms.llama_cpp import LlamaCPP
+from llama_index.core import ServiceContext
+from llama_index.core.vector_stores import SimpleVectorStore
+from llama_index.readers.file.pymu_pdf import PyMuPDFReader
+from llama_index.core import SimpleDirectoryReader
+from llama_index.core.node_parser import SentenceSplitter
+from llama_index.core.schema import TextNode
+from llama_index.core.vector_stores import VectorStoreQuery
+from llama_index.core.schema import NodeWithScore
 from typing import Optional
-from llama_index import QueryBundle
-from llama_index.retrievers import BaseRetriever
+from llama_index.core import QueryBundle
+from llama_index.core.base.base_retriever import BaseRetriever
 from typing import Any, List
-from llama_index.query_engine import RetrieverQueryEngine
+from llama_index.core.query_engine.retriever_query_engine import RetrieverQueryEngine
 import os
 import shutil
 

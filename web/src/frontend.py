@@ -136,7 +136,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg,statistic) -> None:
                 timer.activate()
             if thinking:
                 ui.spinner(size='3rem').classes('self-center')
-            if context.get_client().has_socket_connection:
+            if context.client.has_socket_connection:
                 ui.run_javascript('window.scrollTo(0, document.body.scrollHeight)')
 
         
@@ -427,7 +427,7 @@ def init(fastapi_app: FastAPI,jobStat,taskQueue,cfg,statistic) -> None:
                 timer.activate()
             if thinking:
                 ui.spinner(size='3rem').classes('self-center')
-            if context.get_client().has_socket_connection:
+            if context.client.has_socket_connection:
                 ui.run_javascript('window.scrollTo(0, document.body.scrollHeight)')
             app.storage.user['pdf_ready'] = pdf_ready
 

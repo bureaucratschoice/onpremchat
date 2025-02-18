@@ -16,6 +16,7 @@ RUN apt-get update \
         python3 \
         python3-pip \
         ninja-build \
+        libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

@@ -1,4 +1,4 @@
-from llama_index.prompts import PromptTemplate
+from llama_index.core.prompts.base import PromptTemplate
 
 class PromptFomater():
     
