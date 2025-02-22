@@ -9,7 +9,7 @@ class SimplePdfSummarizer():
         self.create_callback = create_callback
         self.update_callback = update_callback
         self.status_callback = status_callback
-        self.content_gen = pdf_proc.getNodesContents()
+        self.content_gen = pdf_proc.get_nodes_contents()
         self.cfg = cfg
         #Info needed to summarize multiple pages until token limit
         self.total_tokens = 0
@@ -22,10 +22,10 @@ class SimplePdfSummarizer():
         self.create_callback(response)                    
         prompt = f"Ihre Aufgabe ist es, eine kurze Inhaltsangabe des folgenden Textes in maximal drei Sätzen zu schreiben. Schreiben Sie nichts, wenn es sich nur um ein Inhaltsverzeichnis oder bibliografische Informationen handelt. Der Text ist in dreifachen Aposthrophen '''TEXT''' eingefasst: '''{snippet}'''. Schreiben Sie eine kurze Inhaltsangabe in maximal drei Sätzen. ASSISTANT:"
         try:
-            answer = self.llm(prompt, stream=True, temperature = 0.1, max_tokens = 512) #top_k=20, top_p=0.9,repeat_penalty=1.15)
+            answer = self.llm.stream_complete(prompt) #top_k=20, top_p=0.9,repeat_penalty=1.15)
                 
             for answ in answer:
-                res = answ['choices'][0]['text'] 
+                res = answ.delta#['choices'][0]['text'] 
                 response += res
                 if not self.update_callback(response):
                     return False
@@ -33,11 +33,11 @@ class SimplePdfSummarizer():
             print(error)
             response = "An Error occured."
 
-        scorer = rouge_scorer.RougeScorer(['rouge1', 'rougeL'], use_stemmer=True)
-        scores = scorer.score(snippet,response)
-        rouge1 = scores['rouge1'].fmeasure
+        #scorer = rouge_scorer.RougeScorer(['rouge1', 'rougeL'], use_stemmer=True)
+        #scores = scorer.score(snippet,response)
+        #rouge1 = scores['rouge1'].fmeasure
 
-        self.update_callback(response+" (Vgl. "+str(names)+":"+str(sources[0]+"-"+sources[-1])+") (Score: "+str(round(rouge1,2))+")")
+        self.update_callback(response+" (Vgl. "+str(names)+":"+str(sources[0]+"-"+sources[-1])+")")
         return True
 
 
@@ -45,7 +45,8 @@ class SimplePdfSummarizer():
         #set_break = False
 
         for text, name, source in self.content_gen:
-            snippet_tokens = len(self.llm.tokenize(text.encode(encoding = 'UTF-8', errors = 'strict')))
+
+            snippet_tokens = len(text.split(" "))*1.5
             if snippet_tokens + self.total_tokens > int(os.getenv('NUMBER_OF_TOKENS_PDF',default=self.cfg.get_config('model','number_of_tokens_pdf',default=3800))):
                 if not self.summarizeSnippet(self.total_text,self.names,self.sources):
                     break
@@ -71,7 +72,7 @@ class AdvancedPdfSummarizer():
         self.create_callback = create_callback
         self.update_callback = update_callback
         self.status_callback = status_callback
-        self.content_gen = pdf_proc.getNodesContents()
+        self.content_gen = pdf_proc.get_nodes_contents()
         self.cfg = cfg
         self.pdf_proc = pdf_proc
         #Info needed to summarize multiple pages until token limit
@@ -86,7 +87,7 @@ class AdvancedPdfSummarizer():
         prompt = f"Bitte bestimmen Sie, um welche Art von Text es sich bei dem folgenden Ausschnitt handelt:'''{snippet}'''. Um welche Art von Text handelt es sich? ASSISTANT:"
         genre = ""
         try:
-            answer = self.llm(prompt, stream=True, temperature = 0.7, max_tokens = 512) #top_k=20, top_p=0.9,repeat_penalty=1.15)
+            answer = self.llm.complete(prompt, stream=True, max_tokens = 512) #top_k=20, top_p=0.9,repeat_penalty=1.15)
                 
             for answ in answer:
                 res = answ['choices'][0]['text'] 
@@ -102,7 +103,7 @@ class AdvancedPdfSummarizer():
         heading = ""
         prompt = f"Bitte geben Sie dem folgenden Text eine treffende Überschrift:'''{snippet}'''. Wie sollte die Überschrift lauten? ASSISTANT:"
         try:
-            answer = self.llm(prompt, stream=True, temperature = 0.7, max_tokens = 512) #top_k=20, top_p=0.9,repeat_penalty=1.15)
+            answer = self.llm.compelte(prompt, stream=True, max_tokens = 512) #top_k=20, top_p=0.9,repeat_penalty=1.15)
                 
             for answ in answer:
                 res = answ['choices'][0]['text'] 
@@ -122,7 +123,7 @@ class AdvancedPdfSummarizer():
                          
         prompt = f"Ihre Aufgabe ist es, eine kurze Zusammenfassung des folgenden Textes der Gattung {genre} mit der Überschrift '''{heading}''' in maximal drei Sätzen zu schreiben. Schreiben Sie nichts, wenn es sich nur um ein Inhaltsverzeichnis oder bibliografische Informationen handelt. Der Text ist in dreifachen Aposthrophen '''TEXT''' eingefasst: '''{snippet}'''. Schreiben Sie eine Zusammenfassung in drei Sätzen in Markdown. ASSISTANT:"
         try:
-            answer = self.llm(prompt, stream=True, temperature = 0.1, max_tokens = 512) #top_k=20, top_p=0.9,repeat_penalty=1.15)
+            answer = self.llm.complete(prompt, stream=True, max_tokens = 512) #top_k=20, top_p=0.9,repeat_penalty=1.15)
                 
             for answ in answer:
                 res = answ['choices'][0]['text'] 
@@ -155,7 +156,7 @@ class AdvancedPdfSummarizer():
             else:
                 self.total_tokens += snippet_tokens
                 self.total_text += "\n" + text               
-        self.content_gen = self.pdf_proc.getNodesContents()
+        self.content_gen = self.pdf_proc.get_nodes_contents()
         self.total_tokens = 0
         self.total_text = ""
         for text, name, source in self.content_gen:
@@ -186,7 +187,7 @@ class SimpleGraphExtractor():
         self.create_callback = create_callback
         self.update_callback = update_callback
         self.status_callback = status_callback
-        self.content_gen = pdf_proc.getNodesContents()
+        self.content_gen = pdf_proc.get_nodes_contents()
         self.cfg = cfg
         #Info needed to summarize multiple pages until token limit
         self.total_tokens = 0
@@ -261,7 +262,7 @@ class SimplePdfTopicModeller(threading.Thread):
         self.status_callback = status_callback
 
     def run(self):
-        for text, name, source in self.pdf_proc.getNodesContents():
+        for text, name, source in self.pdf_proc.get_nodes_contents():
             response = ""
             self.create_callback(response)                    
             prompt = f"Ihre Aufgabe ist es, die Themen aufzulisten, die wesentlich für den folgenden Text sind. Schreiben Sie maximal drei Themen auf. Schreiben Sie nichts, wenn es sich um ein Inhaltsverzeichnis oder bibliografische Informationen handelt. Der Text ist in dreifachen Aposthrophen '''TEXT''' eingefasst. Ihre Antwort soll als Python-Liste ausgegeben werden, etwa ['Demographie','Fussball','Altenpflege']: '''{text}'''. Schreiben Sie maximal drei wesentliche Themen des Textes als Python-Liste []. ASSISTANT:"

@@ -1,238 +1,221 @@
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-from llama_index.llms.llama_cpp import LlamaCPP
-from llama_index.core import ServiceContext
-from llama_index.core.vector_stores import SimpleVectorStore
-from llama_index.readers.file.pymu_pdf import PyMuPDFReader
-from llama_index.core import SimpleDirectoryReader
-from llama_index.core.node_parser import SentenceSplitter
-from llama_index.core.schema import TextNode
-from llama_index.core.vector_stores import VectorStoreQuery
-from llama_index.core.schema import NodeWithScore
-from typing import Optional
-from llama_index.core import QueryBundle
-from llama_index.core.base.base_retriever import BaseRetriever
-from typing import Any, List
-from llama_index.core.query_engine.retriever_query_engine import RetrieverQueryEngine
 import os
 import shutil
+from typing import Any, List, Optional, Generator, Union
+
+# Updated imports using the new Settings-based configuration.
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.llms.llama_cpp import LlamaCPP
+from llama_index.core import QueryBundle
+from llama_index.core import Settings  # Instead of ServiceContext
+from llama_index.core.vector_stores import SimpleVectorStore, VectorStoreQuery
+from llama_index.core.readers import SimpleDirectoryReader
+from llama_index.readers.file.pymu_pdf import PyMuPDFReader
+from llama_index.core.node_parser import SentenceSplitter
+from llama_index.core.schema import TextNode, NodeWithScore
+from llama_index.core.base.base_retriever import BaseRetriever
+from llama_index.core.query_engine.retriever_query_engine import RetrieverQueryEngine
 
 
-
-
-        
-
-class OwnRetriever(BaseRetriever):
-    """Retriever over a simple vector store."""
-
+class CustomRetriever(BaseRetriever):
+    """
+    A custom retriever that searches the vector store using text embeddings.
+    Implements both the abstract _retrieve method and a public retrieve method that
+    can accept either a string or a QueryBundle.
+    """
     def __init__(
         self,
-        vector_store: SimpleVectorStore,
+        vector_store: Any,
         embed_model: Any,
-        nodes: List,
+        nodes: List[TextNode],
         query_mode: str = "default",
         similarity_top_k: int = 2,
-        
     ) -> None:
-        """Init params."""
-        self._vector_store = vector_store
-        self._embed_model = embed_model
-        self._nodes = nodes
-        self._query_mode = query_mode
-        self._similarity_top_k = similarity_top_k
-        super().__init__()
+        self.vector_store = vector_store
+        self.embed_model = embed_model
+        self.nodes = nodes
+        self.query_mode = query_mode
+        self.similarity_top_k = similarity_top_k
 
     def _retrieve(self, query_bundle: QueryBundle) -> List[NodeWithScore]:
-        """Retrieve."""
-        query_embedding = self._embed_model.get_query_embedding(
-            query_bundle.query_str
-        )
+        """
+        Required abstract method from BaseRetriever.
+        Delegates to the public retrieve method after extracting the query string.
+        """
+        return self.retrieve(query_bundle)
+
+    def retrieve(self, query: Union[str, QueryBundle]) -> List[NodeWithScore]:
+        """
+        Retrieve nodes that are most similar to the input query.
+        If a QueryBundle is provided, extract its query_str.
+        """
+        # Ensure we have a string query.
+        if isinstance(query, QueryBundle):
+            query = query.query_str
+
+        query_embedding = self.embed_model.get_query_embedding(query)
         vector_store_query = VectorStoreQuery(
             query_embedding=query_embedding,
-            similarity_top_k=self._similarity_top_k,
-            mode=self._query_mode,
+            similarity_top_k=self.similarity_top_k,
+            mode=self.query_mode,
         )
-        query_result = self._vector_store.query(vector_store_query)
-        if query_result.nodes == None:
-          query_result.nodes = []
-          for id in query_result.ids:
-            for node in self._nodes:
-              if node.node_id == id :
-                query_result.nodes.append(node)
-        nodes_with_scores = []
-        for index, node in enumerate(query_result.nodes):
-            score: Optional[float] = None
-            if query_result.similarities is not None:
-                score = query_result.similarities[index]
-            nodes_with_scores.append(NodeWithScore(node=node, score=score))
+        query_result = self.vector_store.query(vector_store_query)
 
+        # If nodes are not populated, resolve them using the IDs.
+        if query_result.nodes is None:
+            query_result.nodes = [
+                node for node_id in query_result.ids
+                for node in self.nodes
+                if node.node_id == node_id
+            ]
+
+        nodes_with_scores: List[NodeWithScore] = []
+        for idx, node in enumerate(query_result.nodes):
+            score: Optional[float] = (
+                query_result.similarities[idx]
+                if query_result.similarities and idx < len(query_result.similarities)
+                else None
+            )
+            nodes_with_scores.append(NodeWithScore(node=node, score=score))
         return nodes_with_scores
 
-    def retrieve(self,query_str):
-        query_embedding = self._embed_model.get_query_embedding(query_str)
-        vector_store_query = VectorStoreQuery(
-            query_embedding=query_embedding,
-            similarity_top_k=self._similarity_top_k,
-            mode=self._query_mode,
-        )
-        query_result = self._vector_store.query(vector_store_query)
-        if query_result.nodes == None:
-          query_result.nodes = []
-          for id in query_result.ids:
-            for node in self._nodes:
-              if node.node_id == id :
-                query_result.nodes.append(node)
-        nodes_with_scores = []
-        for index, node in enumerate(query_result.nodes):
-            score: Optional[float] = None
-            if query_result.similarities is not None:
-                score = query_result.similarities[index]
-            nodes_with_scores.append(NodeWithScore(node=node, score=score))
 
-        return nodes_with_scores
-
-class PDF_Processor():
-    def __init__(self, cfg, llm):
-
+class DocumentProcessor:
+    """
+    Processes documents (from PDFs or directories), converts them into text nodes with embeddings,
+    and supports query-based retrieval over the processed content.
+    """
+    def __init__(self, llm: Any, chunk_size: int = 3900):
+        # Optionally, you can use global Settings here if you want to override the defaults.
         self.embed_model = HuggingFaceEmbedding()
-
-        
         self.llm = llm
-
-    
-
-        self.service_context = ServiceContext.from_defaults(
-        llm=self.llm, embed_model=self.embed_model
-        )
-
         self.vector_store = SimpleVectorStore()
-        self.text_parser = SentenceSplitter(
-            chunk_size=3900,
-            # separator=" ",
-        )
+        self.text_parser = SentenceSplitter(chunk_size=chunk_size)
+        self.nodes: List[TextNode] = []
+        self.filepaths: List[str] = []
+        self.last_response: Optional[Any] = None
 
-        self.nodes = []
-        self.filepathes = []
-        self.last_response = ""
+    @staticmethod
+    def get_num_tokens(text: str) -> int:
+        """
+        Approximate token count based on splitting on whitespace.
+        """
+        return len(text.split())
 
-    def get_num_tokens(self,str):
-        #return self.llm.get_num_tokens(str)
-        return len(str.split(" "))
-    def removeFiles(self):
-        for filepath in self.filepathes:
-            if os.path.isdir(filepath):
-                
-                try:
-                    if filepath.startswith('/tmp/'):
-                        shutil.rmtree(filepath)
-                except:
-                    pass
-            if os.path.isfile(filepath):
-                try:
-                    if filepath.startswith('/tmp/'):
-                        os.remove(filepath)
-                except:
-                    pass
+    @staticmethod
+    def _remove_path(path: str) -> bool:
+        """
+        Remove a file or directory if it resides in a temporary location (e.g., /tmp).
+        """
+        if not path.startswith('/tmp/'):
+            return False
+        try:
+            if os.path.isdir(path):
+                shutil.rmtree(path)
+            elif os.path.isfile(path):
+                os.remove(path)
+            return True
+        except Exception:
+            return False
 
-    def remove(self,filepath):
-        
-        if os.path.isdir(filepath):
-                
-            try:
-                if filepath.startswith('/tmp/'):
-                    shutil.rmtree(filepath)
-            except:
-                return False
-        if os.path.isfile(filepath):
-            try:
-                if filepath.startswith('/tmp/'):
-                    os.remove(filepath)
-            except:
-                return False
-        return True
-            
+    def cleanup_paths(self) -> None:
+        """
+        Remove all stored temporary file paths.
+        """
+        for path in self.filepaths:
+            self._remove_path(path)
+        self.filepaths.clear()
 
-    def processDirectory(self, path):
-        loader = SimpleDirectoryReader(input_dir=path)
+    def process_directory(self, directory: str) -> None:
+        """
+        Load and process all documents from a given directory.
+        """
+        loader = SimpleDirectoryReader(input_dir=directory)
         documents = loader.load_data()
-        self.filepathes.append(path)
-        self.processDocs(documents)
-        self.remove(path)
+        self.filepaths.append(directory)
+        self._process_documents(documents)
+        self._remove_path(directory)
 
-    def processDocs(self,documents):
-        text_chunks = []
-        # maintain relationship with source doc index, to help inject doc metadata in (3)
-        doc_idxs = []
-        for doc_idx, doc in enumerate(documents):
-            cur_text_chunks = self.text_parser.split_text(doc.text)
-            text_chunks.extend(cur_text_chunks)
-            doc_idxs.extend([doc_idx] * len(cur_text_chunks))
-
-        nodes = []
-        for idx, text_chunk in enumerate(text_chunks):
-            node = TextNode(
-                text=text_chunk,
-            )
-            src_doc = documents[doc_idxs[idx]]
-            node.metadata = src_doc.metadata
-            nodes.append(node)
-
-        for node in nodes:
-            node_embedding = self.embed_model.get_text_embedding(
-                node.get_content(metadata_mode="all")
-            )
-            node.embedding = node_embedding
-        
-        self.vector_store.add(nodes)
-        
-        self.nodes.extend(nodes)
-
-    def processPDF(self,filepath):
+    def process_pdf(self, filepath: str) -> None:
+        """
+        Load and process a PDF file.
+        """
         loader = PyMuPDFReader()
         documents = loader.load(file_path=filepath)
-        self.filepathes.append(filepath)
-        self.processDocs(documents)
-        self.remove(filepath)
+        self.filepaths.append(filepath)
+        self._process_documents(documents)
+        self._remove_path(filepath)
 
-    def askPDF(self,question):
-        retriever = OwnRetriever(
-            self.vector_store, self.embed_model, self.nodes, query_mode="default", similarity_top_k=3
+    def _process_documents(self, documents: List[Any]) -> None:
+        """
+        Splits document texts into chunks, creates TextNodes, computes embeddings,
+        and adds them to the vector store.
+        """
+        text_chunks: List[str] = []
+        doc_indices: List[int] = []
+        for idx, doc in enumerate(documents):
+            chunks = self.text_parser.split_text(doc.text)
+            text_chunks.extend(chunks)
+            doc_indices.extend([idx] * len(chunks))
+
+        new_nodes: List[TextNode] = []
+        for chunk, idx in zip(text_chunks, doc_indices):
+            node = TextNode(text=chunk)
+            node.metadata = documents[idx].metadata
+            new_nodes.append(node)
+
+        # Compute embeddings for each node and add them to the vector store.
+        for node in new_nodes:
+            node.embedding = self.embed_model.get_text_embedding(
+                node.get_content(metadata_mode="all")
+            )
+        self.vector_store.add(new_nodes)
+        self.nodes.extend(new_nodes)
+
+    def ask(self, question: str) -> Any:
+        """
+        Query the processed documents with the given question and return the LLM response.
+        """
+        retriever = CustomRetriever(
+            vector_store=self.vector_store,
+            embed_model=self.embed_model,
+            nodes=self.nodes,
+            query_mode="default",
+            similarity_top_k=3
         )
-        query_engine = RetrieverQueryEngine.from_args(
-            retriever, service_context=self.service_context, streaming = True
-        )
-        response = query_engine.query(question,)
+        query_engine = RetrieverQueryEngine.from_args(retriever, llm=self.llm, streaming=True)
+        response = query_engine.query(question)
         self.last_response = response
         return response.response_gen
 
-    def getTopSimilar(self,question,top_k=1):
-        retriever = OwnRetriever(
-            self.vector_store, self.embed_model, self.nodes, query_mode="default", similarity_top_k=top_k
+    def get_top_similar(self, question: str, top_k: int = 1) -> List[NodeWithScore]:
+        """
+        Return the top similar nodes for a given question.
+        """
+        retriever = CustomRetriever(
+            vector_store=self.vector_store,
+            embed_model=self.embed_model,
+            nodes=self.nodes,
+            query_mode="default",
+            similarity_top_k=top_k
         )
-        nodes_with_scores = retriever.retrieve(question)
-        return nodes_with_scores
+        return retriever.retrieve(question)
 
-    def getLastResponseMetaData(self):
-        if self.last_response:
-            metadatas = []
-            for node in self.last_response.source_nodes:
-                metadatas.append(node.metadata)
-            return metadatas
-        return False
-            
-    def getNodesContents(self):
+    def get_last_response_metadata(self) -> Optional[List[Any]]:
+        """
+        Retrieve metadata from the source nodes of the last response.
+        """
+        if self.last_response and hasattr(self.last_response, "source_nodes"):
+            return [node.metadata for node in self.last_response.source_nodes]
+        return None
+
+    def get_nodes_contents(self) -> Generator[tuple[str, str, str], None, None]:
+        """
+        Generator yielding (content, filename, source) for each node.
+        """
         for node in self.nodes:
             content = node.get_content()
-            
-            name = str(node.metadata['file_path']) if 'file_path' in node.metadata else 'unknown'
-            if '/' in name:
-                name = name.split('/')[-1]
-            if 'source' in node.metadata:
-                source = str(node.metadata['source'])
-            else:
-                if 'page_label' in node.metadata:
-                    source = str(node.metadata['page_label']) 
-                else: 
-                    source = '?'
-            yield content, name, source
-
-
+            filename = str(node.metadata.get('file_path', 'unknown'))
+            if '/' in filename:
+                filename = filename.split('/')[-1]
+            source = str(node.metadata.get('source', node.metadata.get('page_label', '?')))
+            yield content, filename, source

@@ -17,8 +17,8 @@ if not os.path.exists(filename):
     print("Download complete.")
 llm2 = LlamaCPP(
     model_path=os.getenv('MODEL_BIN_PATH', default=cfg.get_config('model', 'model_bin_path', default="/models/em_german_leo_mistral.Q5_K_S.gguf")),
-    temperature=0.1,
-    max_new_tokens=512,
+    #temperature=0.1,
+    max_new_tokens=2048,
     context_window=n_ctx,
     generate_kwargs={},
     model_kwargs={"n_gpu_layers": int(os.getenv('GPU_LAYERS', default=cfg.get_config('model', 'gpu_layers', default=0))), "n_ctx": n_ctx},
@@ -41,7 +41,7 @@ import threading
 import queue
 import pdftools
 
-from pdfrag import PDF_Processor
+from pdfrag import DocumentProcessor
 from statistics import Statistic
 from promptutils import PromptFomater
 
@@ -208,12 +208,12 @@ class MainProcessor (threading.Thread):
                     filepath = job['filepath']
                     pdfProc = self.jobStat.getPDFProc(job['token'],job['uuid'])
                     if not pdfProc:
-                        pdfProc = PDF_Processor(cfg,llm2)
+                        pdfProc = DocumentProcessor(llm2,3900)
                         self.jobStat.addPDFProc(job['token'],job['uuid'],pdfProc)
                     #Old
                     #pdfProc.processPDF(filepath)
                     #New:
-                    pdfProc.processDirectory(os.path.dirname(filepath))
+                    pdfProc.process_directory(os.path.dirname(filepath))
                     self.jobStat.updateStatus(job['token'],job['uuid'],"finished")
 
             else:
@@ -224,12 +224,12 @@ class MainProcessor (threading.Thread):
                     if not pdfProc:
                         self.jobStat.updateStatus(job['token'],job['uuid'],"failed")
                     else:
-                        answer = pdfProc.askPDF(item['prompt'][-1])
+                        answer = pdfProc.ask(item['prompt'][-1])
                         for answ in answer:
                             response += answ
                             if not self.jobStat.updateAnswer(job['token'],job['uuid'],response):
                                 break
-                        metadatas = pdfProc.getLastResponseMetaData()
+                        metadatas = pdfProc.get_last_response_metadata()
                         response = response + "(vgl. "
                         for metadata in metadatas:
                             source = metadata['source'] if 'source' in metadata else '?'
@@ -245,7 +245,7 @@ class MainProcessor (threading.Thread):
                         response = response + ")"
                         self.jobStat.updateAnswer(job['token'],job['uuid'],response)  
                         self.jobStat.updateStatus(job['token'],job['uuid'],"finished")
-                        pdfProc.getLastResponseMetaData()
+                        pdfProc.get_last_response_metadata()
                 else:
                     if 'job_type' in item and item['job_type'] == 'pdf_summarize':
                         pdf_proc = self.jobStat.getPDFProc(job['token'],job['uuid'])
