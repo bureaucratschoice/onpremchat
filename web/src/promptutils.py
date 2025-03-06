@@ -1,61 +1,38 @@
-from llama_index.core.prompts.base import PromptTemplate
+from llama_index.core.prompts.base import ChatPromptTemplate
 
-class PromptFomater():
-    
-    def llama_prompt(self,sysprompt,prompts,answers):
-        i_p = 0
-        i_a = 0
-        prompt = ""
-        prompt += f"<|system|>\n{sysprompt}</s>\n"
-        while i_p < len(prompts):
-            prompt += f"<|user|>\n{prompts[i_p]}</s>\n"
+#from llama_index.core import ChatPromptTemplate
 
-            if i_a < len(answers):
-                prompt += f"<|assistant|>\n{answers[i_a]}</s>\n"
-            i_p += 1
-            i_a += 1
-        prompt = prompt + "<|assistant|>\n"
-        return prompt
+class RoleToggle:
+    """
+    A class to toggle between two roles: 'user' and 'assistant'.
+    """
+    def __init__(self, user: str, assistant: str):
+        self.user = user
+        self.assistant = assistant
+        self._acting = self.user  # Start with the user role.
 
-    def llama3_prompt(self,sysprompt,prompts,answers):
-        i_p = 0
-        i_a = 0
-        prompt = "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n"
-        prompt += f"{sysprompt}<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n"
-        while i_p < len(prompts):
-            prompt += f"{prompts[i_p]}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
+    def toggle(self) -> str:
+        """Toggles the current role between 'user' and 'assistant'."""
+        previous_role = self._acting
+        self._acting = self.assistant if self._acting == self.user else self.user
+        return previous_role
 
-            if i_a < len(answers):
-                prompt += f"{answers[i_a]}<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n"
-            i_p += 1
-            i_a += 1
-        print(prompt)
-        return prompt
+class FriendlyFormatter:
+    def interleave_prompts_answers(self, prompts, answers):
+        combined = []
+        for i in range(len(prompts)):
+            combined.append(prompts[i])
+            if i < len(answers):  # Ensure we don't go out of bounds for answers
+                combined.append(answers[i])
+        return combined
 
-    def leo_mistral_prompt(self,sysprompt,prompts,answers):
-        i_p = 0
-        i_a = 0    
-        prompt = ""
-        while i_p < len(prompts):
-            prompt += "USER:  " + prompts[i_p]
-            if i_a < len(answers):
-                prompt += "ASSISTANT:  " + answers[i_a]
-            i_p += 1
-            i_a += 1
-                            
-        prompt = f"{sysprompt} {prompt} ASSISTANT:"    
-        return prompt
-
-    def format(self,item,sysprompt,pformat):
-        prompts = item['prompt']
-        answers = []
-        if 'answer' in item:
-            answers = item['answer']
-
-        if pformat == 'llama3':
-            prompt = self.llama3_prompt(sysprompt,prompts,answers)
-        else:
-            prompt = self.leo_mistral_prompt(sysprompt,prompts,answers)
-
-        prompt = PromptTemplate(prompt)        
-        return prompt
+    def format(self, item, sysprompt):
+        toggle = RoleToggle("user", "assistant")
+        prompts = item.get('prompt', [])
+        answers = item.get('answer', [])
+        
+        messages = [("system", sysprompt)]
+        for message in self.interleave_prompts_answers(prompts, answers):
+            messages.append((toggle.toggle(), message))
+        
+        return ChatPromptTemplate.from_messages(messages)

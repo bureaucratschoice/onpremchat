@@ -26,7 +26,7 @@ import frontend
 import pdftools
 from pdfrag import DocumentProcessor
 from statistics import Statistic
-from promptutils import PromptFomater
+from promptutils import FriendlyFormatter
 
 
 # -----------------------------
@@ -59,7 +59,7 @@ llm2 = LlamaCPP(
         'MODEL_BIN_PATH',
         default=cfg.get_config('model', 'model_bin_path', default="/models/em_german_leo_mistral.Q5_K_S.gguf")
     ),
-    max_new_tokens=2048,
+    max_new_tokens=16000,
     context_window=n_ctx,
     generate_kwargs={},
     model_kwargs={
@@ -364,17 +364,19 @@ class MainProcessor(threading.Thread):
                     default=cfg.get_config('model', 'promptformat', default="leo-mistral")
                 )
                 print("inChat")
-                formatter = PromptFomater()
+                formatter = FriendlyFormatter()
                 print(item)
-                prompt = formatter.format(item, sysprompt, prompt_format)
+                prompt = formatter.format(item, sysprompt)
                 response = ""
                 print("Formattet")
                 self.job_stat.add_answer(token, uuid, response)
                 try:
                     if item.get('custom_config'):
                         answer = llm.stream(prompt)
+                        #answer = llm.create_chat_completion(prompt,stream=True)
                     else:
                         answer = llm.stream(prompt)
+                        #answer = llm.create_chat_completion(prompt,stream=True)
                     for answ in answer:
                         response += answ
                         if not self.job_stat.update_answer(token, uuid, response):
