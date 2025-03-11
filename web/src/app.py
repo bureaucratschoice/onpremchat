@@ -33,7 +33,7 @@ from promptutils import FriendlyFormatter
 # Environment & LLM Initialization
 # -----------------------------
 
-print("start")
+
 cfg = config()
 
 # Retrieve context tokens and model parameters from environment or config
@@ -185,6 +185,7 @@ class JobStatus:
 
     def add_answer(self, token: str, uuid: str, answer: str) -> bool:
         """Append an answer to the job identified by token and uuid."""
+        print(f'called add_answer for token: {token} with uuid: {uuid} and answer: {answer}')
         try:
             if token in self.jobs_by_token and uuid in self.jobs_by_token[token]:
                 self.jobs_by_token[token][uuid].setdefault('answer', []).append(answer)
@@ -195,6 +196,7 @@ class JobStatus:
 
     def update_answer(self, token: str, uuid: str, answer: str) -> bool:
         """Update the last answer of the job identified by token and uuid."""
+        print(f'called update_answer for token: {token} with uuid: {uuid} and answer: {answer}')
         try:
             if token in self.jobs_by_token and uuid in self.jobs_by_token[token]:
                 if self.jobs_by_token[token][uuid].get('answer'):
@@ -209,6 +211,7 @@ class JobStatus:
 
     def update_status(self, token: str, uuid: str, status: str) -> bool:
         """Update the status of the job identified by token and uuid."""
+        print(f'called update_status for token: {token} with uuid: {uuid} and status: {status}')
         try:
             if token in self.jobs_by_token and uuid in self.jobs_by_token[token]:
                 self.jobs_by_token[token][uuid]['status'] = status
@@ -281,7 +284,6 @@ class MainProcessor(threading.Thread):
             item = self.job_stat.get_job_status(token, uuid)
             self.statistic.updateQueueSize(self.job_stat.count_queued_jobs())
 
-            print(item.get('job_type', ''))
 
             job_type = item.get('job_type', '')
             if job_type == 'pdf_processing':
@@ -325,7 +327,7 @@ class MainProcessor(threading.Thread):
 
             elif job_type == 'pdf_summarize':
                 pdf_proc = self.job_stat.get_pdf_proc(token, uuid)
-                self.job_stat.add_answer(token, uuid, "")
+                #self.job_stat.add_answer(token, uuid, "")
                 create_callback = lambda x: self.job_stat.add_answer(token, uuid, x)
                 update_callback = lambda x: self.job_stat.update_answer(token, uuid, x)
                 status_callback = lambda x: self.job_stat.update_status(token, uuid, x)
@@ -357,25 +359,29 @@ class MainProcessor(threading.Thread):
                 # Default: process chat job
                 sysprompt = os.getenv(
                     'CHATPROMPT',
-                    default=cfg.get_config('model', 'chatprompt', default="Du bist ein hilfreicher Assistent.")
+                    default=cfg.get_config('model', 'chatprompt', default="Sei hilfreich!")
                 )
                 prompt_format = os.getenv(
                     'PROMPTFORMAT',
                     default=cfg.get_config('model', 'promptformat', default="leo-mistral")
                 )
-                print("inChat")
+                
                 formatter = FriendlyFormatter()
-                print(item)
+                
                 prompt = formatter.format(item, sysprompt)
                 response = ""
-                print("Formattet")
+                
                 self.job_stat.add_answer(token, uuid, response)
+                completion_kwargs={
+                    "stop": ["ASSISTANT:"],  # Verhindert das automatische Einfügen
+                    "format": "markdown"
+                }
                 try:
                     if item.get('custom_config'):
-                        answer = llm.stream(prompt)
+                        answer = llm.stream(prompt,kwargs=completion_kwargs)
                         #answer = llm.create_chat_completion(prompt,stream=True)
                     else:
-                        answer = llm.stream(prompt)
+                        answer = llm.stream(prompt,kwargs=completion_kwargs)
                         #answer = llm.create_chat_completion(prompt,stream=True)
                     for answ in answer:
                         response += answ

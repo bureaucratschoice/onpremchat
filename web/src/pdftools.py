@@ -33,6 +33,8 @@ class SimplePdfSummarizer:
         self.total_text = ""
         self.names = []
         self.sources = []
+        self.response = ""
+        self.create_callback("")
 
     def summarize_snippet(self, snippet, names, sources):
         """
@@ -46,8 +48,8 @@ class SimplePdfSummarizer:
         Returns:
             bool: True if the summarization completed successfully, False otherwise.
         """
-        response = ""
-        self.create_callback(response)
+        
+
 
         prompt = (
             "Ihre Aufgabe ist es, eine kurze Inhaltsangabe des folgenden Textes in maximal drei Sätzen zu schreiben. "
@@ -57,23 +59,19 @@ class SimplePdfSummarizer:
         )
 
         try:
-            answer = self.llm.stream_complete(prompt)  # e.g., top_k=20, top_p=0.9, repeat_penalty=1.15
+            answer = self.llm.stream_complete(prompt) 
             for answ in answer:
                 res = answ.delta  # Alternatively, use answ['choices'][0]['text'] if applicable.
-                response += res
-                if not self.update_callback(response):
+                self.response += res
+                if not self.update_callback(self.response):
                     return False
         except Exception as error:
             print(error)
-            response = "An Error occurred."
+            self.response = "An Error occurred."
 
-        # Optional: Calculate ROUGE scores if needed.
-        # scorer = rouge_scorer.RougeScorer(['rouge1', 'rougeL'], use_stemmer=True)
-        # scores = scorer.score(snippet, response)
-        # rouge1 = scores['rouge1'].fmeasure
 
         summary_meta = f" (Vgl. {names}:{sources[0]}-{sources[-1]})"
-        self.update_callback(response + summary_meta)
+        self.update_callback(self.response)
         return True
 
     def run(self):
@@ -83,6 +81,7 @@ class SimplePdfSummarizer:
         Returns:
             bool: True if the summarization process finishes, False if stopped early.
         """
+        
         for text, name, source in self.content_gen:
             # Estimate tokens using a word count multiplied by a factor
             snippet_tokens = len(text.split(" ")) * 2

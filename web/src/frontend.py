@@ -204,20 +204,13 @@ def init(fastapi_app: FastAPI, jobStat, taskQueue, cfg, statistic) -> None:
 
             # Render each message with improved styling
             for name, text in messages:
-                if name == you:
+        
                     # User messages: light background, dark text, right-aligned
-                    ui.chat_message(
-                        text=text,
-                        name=name,
-                        sent=True
-                    )#.classes("bg-gray-200 text-black rounded-lg p-2 m-1 max-w-xs self-end")
-                else:
-                    # Assistant messages: colored background, white text, left-aligned
-                    ui.chat_message(
-                        text=text,
-                        name=name,
-                        sent=False
-                    )#.classes("bg-blue-500 text-white rounded-lg p-2 m-1 max-w-xs self-start")
+                with ui.chat_message(name=name, sent=name == you):
+                    ui.markdown(text)
+                #ui.chat_message(name=name, sent=name == you, text = text)
+                    #.classes("bg-gray-200 text-black rounded-lg p-2 m-1 max-w-xs self-end")
+   
 
             if status.get('status') == 'processing':
                 timer.activate()

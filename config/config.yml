@@ -6,8 +6,8 @@ model:
   top_k: 40
   top_p: 0.9
   repeat_penalty: 1.15
-  model_download_url: "https://huggingface.co/TheBloke/em_german_leo_mistral-GGUF/resolve/main/em_german_leo_mistral.Q5_K_S.gguf"
-  model_bin_path: "/models/em_german_leo_mistral.Q5_K_S.gguf"
+  model_download_url: "https://huggingface.co/bartowski/Mistral-Nemo-Instruct-2407-GGUF/resolve/main/Mistral-Nemo-Instruct-2407-Q5_K_L.gguf"
+  model_bin_path: "/models/Mistral-Nemo-Instruct-2407-Q5_K_L.gguf"
   number_of_tokens: 4096
   verbose: True
   gpu_layers: 0
