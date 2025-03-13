@@ -59,8 +59,8 @@ llm2 = LlamaCPP(
         'MODEL_BIN_PATH',
         default=cfg.get_config('model', 'model_bin_path', default="/models/em_german_leo_mistral.Q5_K_S.gguf")
     ),
-    max_new_tokens=16000,
-    context_window=n_ctx,
+    max_new_tokens=int(n_ctx/2)-1,
+    context_window=int(n_ctx/2),
     generate_kwargs={},
     model_kwargs={
         "n_gpu_layers": int(os.getenv('GPU_LAYERS', default=cfg.get_config('model', 'gpu_layers', default=0))),
