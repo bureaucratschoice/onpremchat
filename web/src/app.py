@@ -185,7 +185,7 @@ class JobStatus:
 
     def add_answer(self, token: str, uuid: str, answer: str) -> bool:
         """Append an answer to the job identified by token and uuid."""
-        print(f'called add_answer for token: {token} with uuid: {uuid} and answer: {answer}')
+        #print(f'called add_answer for token: {token} with uuid: {uuid} and answer: {answer}')
         try:
             if token in self.jobs_by_token and uuid in self.jobs_by_token[token]:
                 self.jobs_by_token[token][uuid].setdefault('answer', []).append(answer)
@@ -196,7 +196,7 @@ class JobStatus:
 
     def update_answer(self, token: str, uuid: str, answer: str) -> bool:
         """Update the last answer of the job identified by token and uuid."""
-        print(f'called update_answer for token: {token} with uuid: {uuid} and answer: {answer}')
+        #print(f'called update_answer for token: {token} with uuid: {uuid} and answer: {answer}')
         try:
             if token in self.jobs_by_token and uuid in self.jobs_by_token[token]:
                 if self.jobs_by_token[token][uuid].get('answer'):
@@ -211,7 +211,7 @@ class JobStatus:
 
     def update_status(self, token: str, uuid: str, status: str) -> bool:
         """Update the status of the job identified by token and uuid."""
-        print(f'called update_status for token: {token} with uuid: {uuid} and status: {status}')
+        #print(f'called update_status for token: {token} with uuid: {uuid} and status: {status}')
         try:
             if token in self.jobs_by_token and uuid in self.jobs_by_token[token]:
                 self.jobs_by_token[token][uuid]['status'] = status

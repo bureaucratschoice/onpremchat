@@ -408,7 +408,9 @@ def init(fastapi_app: FastAPI, jobStat, taskQueue, cfg, statistic) -> None:
                     output_fin = True
             
             for name, text in pdfmessages:
-                ui.chat_message(text=text, name=name, sent=name == you)
+                #ui.chat_message(text=text, name=name, sent=name == you)
+                with ui.chat_message(name=name, sent=name == you):
+                    ui.markdown(text)
                 
             if 'status' in status:
                 if status['status'] == 'processing':
