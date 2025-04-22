@@ -5,12 +5,14 @@ services:
       context: ../web
       dockerfile: ./build_app/Dockerfile
     image:
-      bureaucratschoice/onpremchat:0.8.1
+      bureaucratschoice/onpremchat:0.8.2
     command:  ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "80"] #["bash"]
     environment:
       - SUPERTOKEN=PLEASE_CHANGE_THIS_PLEASE # Really please change this, otherwise everyone reading the github repo can get access.
       - HUGGINGFACE_HUB_CACHE=/models/hub
       - HF_DATASETS_OFFLINE=1
+      - MODEL_DOWNLOAD_URL=https://huggingface.co/bartowski/google_gemma-3-1b-it-GGUF/resolve/main/google_gemma-3-1b-it-Q8_0.gguf
+      - MODEL_BIN_PATH=/models/google_gemma-3-1b-it-Q8_0.gguf
       #- SUMMARIZER=advanced
     volumes:
       - ../models:/models

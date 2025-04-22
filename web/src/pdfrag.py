@@ -129,11 +129,14 @@ class DocumentProcessor:
         """
         Load and process all documents from a given directory.
         """
-        loader = SimpleDirectoryReader(input_dir=directory)
-        documents = loader.load_data()
-        self.filepaths.append(directory)
-        self._process_documents(documents)
-        self._remove_path(directory)
+        try:
+            loader = SimpleDirectoryReader(input_dir=directory)
+            documents = loader.load_data()
+            self.filepaths.append(directory)
+            self._process_documents(documents)
+            self._remove_path(directory)
+        except Error as e:
+            print("Error while loading files in pdfrag.py")
 
     def process_pdf(self, filepath: str) -> None:
         """
