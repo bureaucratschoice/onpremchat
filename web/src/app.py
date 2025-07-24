@@ -465,8 +465,26 @@ task_lock = threading.Lock()
 task_queue = queue.Queue(1000)
 statistic = Statistic()
 
-processor_thread = MainProcessor(task_lock, task_queue, job_stat, statistic)
-processor_thread.start()
+#processor_thread = MainProcessor(task_lock, task_queue, job_stat, statistic)
+#processor_thread.start()
+
+#------------------------------
+# Fix to make sure the thread restarts on Exception
+#------------------------------
+def start_processor():
+    while True:
+        try:
+            processor = MainProcessor(task_lock, task_queue, job_stat, statistic)
+            processor.start()
+            processor.join()  # Warten, bis Thread abstürzt
+            print("MainProcessor abgestürzt. Starte neu ...")
+        except Exception as e:
+            print("Fehler im MainProcessor-Supervisor:", e)
+        import time
+        time.sleep(2)  # kurze Pause vor Neustart
+
+supervisor_thread = threading.Thread(target=start_processor, daemon=True)
+supervisor_thread.start()
 
 
 # -----------------------------
